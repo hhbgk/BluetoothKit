@@ -2,7 +2,6 @@ package com.inuker.bluetooth;
 
 import android.bluetooth.BluetoothDevice;
 import android.content.Context;
-import android.os.ParcelUuid;
 import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -46,6 +45,7 @@ public class DeviceDetailAdapter extends BaseAdapter {
         List<BleGattService> services = profile.getServices();
 
         for (BleGattService service : services) {
+
             items.add(new DetailItem(DetailItem.TYPE_SERVICE, service.getUUID(), null));
             List<BleGattCharacter> characters = service.getCharacters();
             for (BleGattCharacter character : characters) {

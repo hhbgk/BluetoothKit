@@ -7,10 +7,6 @@ import android.widget.TextView;
 
 import com.inuker.bluetooth.library.beacon.Beacon;
 import com.inuker.bluetooth.library.connect.listener.BluetoothStateListener;
-import com.inuker.bluetooth.library.connect.options.BleConnectOptions;
-import com.inuker.bluetooth.library.connect.response.BleConnectResponse;
-import com.inuker.bluetooth.library.model.BleGattProfile;
-import com.inuker.bluetooth.library.receiver.listener.BluetoothStateChangeListener;
 import com.inuker.bluetooth.library.search.SearchRequest;
 import com.inuker.bluetooth.library.search.SearchResult;
 import com.inuker.bluetooth.library.search.response.SearchResponse;
@@ -70,7 +66,7 @@ public class MainActivity extends Activity {
         ClientManager.getClient().registerBluetoothStateListener(new BluetoothStateListener() {
             @Override
             public void onBluetoothStateChanged(boolean openOrClosed) {
-                BluetoothLog.v(String.format("onBluetoothStateChanged %b", openOrClosed));
+                BluetoothLog.i(String.format("onBluetoothStateChanged %b", openOrClosed));
             }
         });
 
@@ -80,7 +76,7 @@ public class MainActivity extends Activity {
     private final BluetoothStateListener mBluetoothStateListener = new BluetoothStateListener() {
         @Override
         public void onBluetoothStateChanged(boolean openOrClosed) {
-            BluetoothLog.v(String.format("MainActivity onBluetoothStateChanged: %s", openOrClosed ? "open" : "close"));
+            BluetoothLog.i(String.format("MainActivity onBluetoothStateChanged: %s", openOrClosed ? "open" : "close"));
         }
 
     };
@@ -109,7 +105,7 @@ public class MainActivity extends Activity {
                 mAdapter.setDataList(mDevices);
 
                 Beacon beacon = new Beacon(device.scanRecord);
-                BluetoothLog.v(String.format("beacon for %s\n%s", device.getAddress(), beacon.toString()));
+                BluetoothLog.i(String.format("beacon for %s\n%s", device.getAddress(), beacon.toString()));
 
 //                BeaconItem beaconItem = null;
 //                BeaconParser beaconParser = new BeaconParser(beaconItem);

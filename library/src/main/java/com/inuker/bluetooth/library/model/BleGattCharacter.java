@@ -4,6 +4,8 @@ import android.bluetooth.BluetoothGattCharacteristic;
 import android.os.Parcel;
 import android.os.Parcelable;
 
+import com.inuker.bluetooth.library.utils.Utils;
+
 import java.util.UUID;
 
 /**
@@ -82,8 +84,8 @@ public class BleGattCharacter implements Parcelable {
     public String toString() {
         return "BleGattCharacter{" +
                 "uuid=" + uuid +
-                ", property=" + property +
-                ", permissions=" + permissions +
+                ", property=" + Utils.getCharPropertie(property)+//property +
+                ", permissions=" + Utils.getCharPermission(permissions)+// permissions +
                 '}';
     }
 }

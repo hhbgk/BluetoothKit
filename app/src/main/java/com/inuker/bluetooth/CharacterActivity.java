@@ -15,9 +15,11 @@ import com.inuker.bluetooth.library.connect.response.BleUnnotifyResponse;
 import com.inuker.bluetooth.library.connect.response.BleWriteResponse;
 import com.inuker.bluetooth.library.utils.BluetoothLog;
 import com.inuker.bluetooth.library.utils.ByteUtils;
-import static com.inuker.bluetooth.library.Constants.*;
 
 import java.util.UUID;
+
+import static com.inuker.bluetooth.library.Constants.REQUEST_SUCCESS;
+import static com.inuker.bluetooth.library.Constants.STATUS_DISCONNECTED;
 
 /**
  * Created by dingjikerbo on 2016/9/6.
@@ -82,12 +84,15 @@ public class CharacterActivity extends Activity implements View.OnClickListener 
         }
     };
 
+    private boolean isWriteSuccess = false;
     private final BleWriteResponse mWriteRsp = new BleWriteResponse() {
         @Override
         public void onResponse(int code) {
             if (code == REQUEST_SUCCESS) {
+                isWriteSuccess = true;
                 CommonUtils.toast("success");
             } else {
+                isWriteSuccess = false;
                 CommonUtils.toast("failed");
             }
         }
@@ -133,8 +138,47 @@ public class CharacterActivity extends Activity implements View.OnClickListener 
                 ClientManager.getClient().read(mMac, mService, mCharacter, mReadRsp);
                 break;
             case R.id.write:
-                ClientManager.getClient().write(mMac, mService, mCharacter,
-                        ByteUtils.stringToBytes(mEtInput.getText().toString()), mWriteRsp);
+                byte[] data;
+                if (isWriteSuccess){
+                    data = new byte[13];
+                    data[0] = (byte) 0xab;//magic
+                    data[1] = 0x00;//reserve errorFlag ackFlag version
+                    data[2] = 0x00;//payload length
+                    data[3] = 0x05;//payload length
+                    byte[] crc16 = calculate(data, 0, 3);
+                    data[4] = 0x01;//crc16[0];//
+                    data[5] = 0x68;//crc16[1];
+                    data[6] = 0x01;//seq id
+                    data[7] = 0x3c;//seq id
+
+                    data[8] = 0x06;//cmd id
+                    data[9] = 0x00;//version 4bits & reserve 4bits
+                    data[10] = 0x03;//key
+                    data[11] = 0x00;//key header
+                    data[12] = 0x00;//key header
+                } else {
+                    data = new byte[13];
+                    data[0] = (byte) 0xab;//magic
+                    data[1] = 0x00;//reserve errorFlag ackFlag version
+                    data[2] = 0x00;//payload length
+                    data[3] = 0x05;//payload length
+                    byte[] crc16 = calculate(data, 0, 3);
+                    data[4] = (byte) 0xc5;//crc16[0];//
+                    data[5] = (byte) 0x89;//crc16[1];
+                    data[6] = 0x00;//seq id
+                    data[7] = 0x1e;//seq id
+
+                    data[8] = 0x06;//cmd id
+                    data[9] = 0x00;//version 4bits & reserve 4bits
+                    data[10] = 0x10;//key
+                    data[11] = 0x00;//key header
+                    data[12] = 0x00;//key header
+                }
+
+
+                ClientManager.getClient().write(mMac, mService, mCharacter,data,
+//                        ByteUtils.stringToBytes(mEtInput.getText().toString()),
+                        mWriteRsp);
                 break;
             case R.id.notify:
                 ClientManager.getClient().notify(mMac, mService, mCharacter, mNotifyRsp);
@@ -144,7 +188,18 @@ public class CharacterActivity extends Activity implements View.OnClickListener 
                 break;
         }
     }
-
+    public static byte[] calculate(byte[] buff, int start, int end) {
+        int crcShort = 0;
+        for (int i = start; i <= end; i++) {
+            crcShort = ((crcShort  >>> 8) | (crcShort  << 8) )& 0xffff;
+            crcShort ^= (buff[i] & 0xff);
+            crcShort ^= ((crcShort & 0xff) >> 4);
+            crcShort ^= (crcShort << 12) & 0xffff;
+            crcShort ^= ((crcShort & 0xFF) << 5) & 0xffff;
+        }
+        crcShort &= 0xffff;
+        return new byte[] {(byte) (crcShort & 0xff), (byte) ((crcShort >> 8) & 0xff)};
+    }
     private final BleConnectStatusListener mConnectStatusListener = new BleConnectStatusListener() {
         @Override
         public void onConnectStatusChanged(String mac, int status) {

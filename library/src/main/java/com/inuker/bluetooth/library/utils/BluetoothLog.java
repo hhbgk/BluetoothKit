@@ -22,7 +22,7 @@ public class BluetoothLog {
     }
 
     public static void v(String msg) {
-        Log.v(LOG_TAG, msg);
+        Log.i(LOG_TAG, msg);
     }
 
     public static void d(String msg) {

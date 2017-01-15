@@ -1,6 +1,5 @@
 package com.inuker.bluetooth.library.connect;
 
-import android.annotation.TargetApi;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGatt;
@@ -11,7 +10,6 @@ import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothProfile;
 import android.content.Context;
 import android.content.Intent;
-import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
@@ -39,6 +37,7 @@ import com.inuker.bluetooth.library.utils.proxy.ProxyUtils;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
@@ -180,7 +179,7 @@ public class BleConnectWorker implements Handler.Callback, IBleConnectWorker, IB
     public void onCharacteristicRead(BluetoothGattCharacteristic characteristic, int status, byte[] value) {
         checkRuntime();
 
-        BluetoothLog.v(String.format(
+        BluetoothLog.v(String.format(Locale.US,
                 "onCharacteristicRead for %s: status = %d, service = 0x%s, character = 0x%s, value = %s",
                 mBluetoothDevice.getAddress(),
                 status,
@@ -197,7 +196,7 @@ public class BleConnectWorker implements Handler.Callback, IBleConnectWorker, IB
     public void onCharacteristicWrite(BluetoothGattCharacteristic characteristic, int status, byte[] value) {
         checkRuntime();
 
-        BluetoothLog.v(String.format(
+        BluetoothLog.v(String.format(Locale.US,
                 "onCharacteristicWrite for %s: status = %d, service = 0x%s, character = 0x%s, value = %s",
                 mBluetoothDevice.getAddress(),
                 status,

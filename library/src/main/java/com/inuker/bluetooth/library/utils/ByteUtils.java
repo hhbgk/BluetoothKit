@@ -1,12 +1,15 @@
 package com.inuker.bluetooth.library.utils;
 
+import android.util.Log;
+
 import java.util.Arrays;
+import java.util.Locale;
 
 /**
  * Created by dingjikerbo on 2015/12/31.
  */
 public class ByteUtils {
-
+    private static String tag = ByteUtils.class.getSimpleName();
     public static final byte[] EMPTY_BYTES = new byte[]{};
 
     public static final int BYTE_MAX = 0xff;
@@ -15,12 +18,27 @@ public class ByteUtils {
         return bytes != null ? bytes : EMPTY_BYTES;
     }
 
+    public static String bytes2HexString(byte[] bytes) {
+        String ret = "";
+        for (byte aByte : bytes) {
+            String hex = Integer.toHexString(aByte & 0xFF);
+            if (hex.length() == 1) {
+                hex = '0' + hex;
+            }
+            ret += hex.toUpperCase(Locale.CHINA);
+        }
+        return ret;
+    }
+
+
     public static String byteToString(byte[] bytes) {
         StringBuilder sb = new StringBuilder();
 
         if (!isEmpty(bytes)) {
+            Log.w(tag, "byte size="+bytes.length + ", " + bytes2HexString(bytes));
+            Log.e(tag, "string="+new String(bytes));
             for (int i = 0; i < bytes.length; i++) {
-                sb.append(String.format("%02X", bytes[i]));
+                sb.append(String.format("%02X ", bytes[i]));
             }
         }
 
