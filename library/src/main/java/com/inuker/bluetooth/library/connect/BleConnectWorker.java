@@ -138,12 +138,12 @@ public class BleConnectWorker implements Handler.Callback, IBleConnectWorker, IB
         BluetoothLog.v(String.format("setConnectStatus status = %s", Constants.getStatusText(status)));
         mConnectStatus = status;
     }
-
+//-----------------------------------------------BluetoothGattCallback start-------------------------------------------
     @Override
     public void onConnectionStateChange(int status, int newState) {
         checkRuntime();
 
-        BluetoothLog.v(String.format("onConnectionStateChange for %s: status = %d, newState = %d",
+        BluetoothLog.v(String.format(Locale.US, "onConnectionStateChange for %s: status = %d, newState = %d",
                 mBluetoothDevice.getAddress(), status, newState));
 
         if (status == BluetoothGatt.GATT_SUCCESS && newState == BluetoothProfile.STATE_CONNECTED) {
@@ -161,7 +161,7 @@ public class BleConnectWorker implements Handler.Callback, IBleConnectWorker, IB
     public void onServicesDiscovered(int status) {
         checkRuntime();
 
-        BluetoothLog.v(String.format("onServicesDiscovered for %s: status = %d",
+        BluetoothLog.v(String.format(Locale.US, "onServicesDiscovered for %s: status = %d",
                 mBluetoothDevice.getAddress(), status));
 
         if (status == BluetoothGatt.GATT_SUCCESS) {
@@ -213,7 +213,7 @@ public class BleConnectWorker implements Handler.Callback, IBleConnectWorker, IB
     public void onCharacteristicChanged(BluetoothGattCharacteristic characteristic, byte[] value) {
         checkRuntime();
 
-        BluetoothLog.v(String.format("onCharacteristicChanged for %s: value = %s, service = 0x%s, character = 0x%s",
+        BluetoothLog.v(String.format(Locale.US, "onCharacteristicChanged for %s: value = %s, service = 0x%s, character = 0x%s",
                 mBluetoothDevice.getAddress(),
                 ByteUtils.byteToString(value),
                 characteristic.getService().getUuid(),
@@ -226,7 +226,7 @@ public class BleConnectWorker implements Handler.Callback, IBleConnectWorker, IB
     public void onDescriptorRead(BluetoothGattDescriptor descriptor, int status, byte[] value) {
         checkRuntime();
 
-        BluetoothLog.v(String.format("onDescriptorRead for %s: status = %d, service = 0x%s, character = 0x%s, descriptor = 0x%s",
+        BluetoothLog.v(String.format(Locale.US, "onDescriptorRead for %s: status = %d, service = 0x%s, character = 0x%s, descriptor = 0x%s",
                 mBluetoothDevice.getAddress(),
                 status,
                 descriptor.getCharacteristic().getService().getUuid(),
@@ -242,7 +242,7 @@ public class BleConnectWorker implements Handler.Callback, IBleConnectWorker, IB
     public void onDescriptorWrite(BluetoothGattDescriptor descriptor, int status) {
         checkRuntime();
 
-        BluetoothLog.v(String.format("onDescriptorWrite for %s: status = %d, service = 0x%s, character = 0x%s, descriptor = 0x%s",
+        BluetoothLog.v(String.format(Locale.US, "onDescriptorWrite for %s: status = %d, service = 0x%s, character = 0x%s, descriptor = 0x%s",
                 mBluetoothDevice.getAddress(),
                 status,
                 descriptor.getCharacteristic().getService().getUuid(),
@@ -258,13 +258,14 @@ public class BleConnectWorker implements Handler.Callback, IBleConnectWorker, IB
     public void onReadRemoteRssi(int rssi, int status) {
         checkRuntime();
 
-        BluetoothLog.v(String.format("onReadRemoteRssi for %s, rssi = %d, status = %d",
+        BluetoothLog.v(String.format(Locale.US, "onReadRemoteRssi for %s, rssi = %d, status = %d",
                 mBluetoothDevice.getAddress(), rssi, status));
 
         if (mGattResponseListener != null && mGattResponseListener instanceof ReadRssiListener) {
             ((ReadRssiListener) mGattResponseListener).onReadRemoteRssi(rssi, status);
         }
     }
+///-----------------------------------------BluetoothGattCallback end----------------------------------------------------
 
     private void broadcastConnectStatus(int status) {
         Intent intent = new Intent(Constants.ACTION_CONNECT_STATUS_CHANGED);

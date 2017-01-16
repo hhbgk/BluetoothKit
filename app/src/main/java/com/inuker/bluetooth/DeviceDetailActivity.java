@@ -16,9 +16,12 @@ import com.inuker.bluetooth.library.connect.response.BleConnectResponse;
 import com.inuker.bluetooth.library.model.BleGattProfile;
 import com.inuker.bluetooth.library.utils.BluetoothLog;
 import com.inuker.bluetooth.library.utils.BluetoothUtils;
-import static com.inuker.bluetooth.library.Constants.*;
 
+import java.util.Locale;
 import java.util.UUID;
+
+import static com.inuker.bluetooth.library.Constants.REQUEST_SUCCESS;
+import static com.inuker.bluetooth.library.Constants.STATUS_CONNECTED;
 
 /**
  * Created by dingjikerbo on 2016/9/2.
@@ -107,7 +110,7 @@ public class DeviceDetailActivity extends Activity {
         ClientManager.getClient().connect(mDevice.getAddress(), new BleConnectResponse() {
             @Override
             public void onResponse(int code, BleGattProfile profile) {
-                BluetoothLog.v(String.format("onResponse code = %d", code));
+                BluetoothLog.v(String.format(Locale.US, "onResponse code = %d", code));
 
                 mTvTitle.setText(String.format("%s", mDevice.getAddress()));
                 mPbar.setVisibility(View.GONE);
