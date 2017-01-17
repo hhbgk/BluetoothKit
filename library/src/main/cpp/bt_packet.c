@@ -9,7 +9,7 @@
 #include "bt_packet.h"
 #include "debug.h"
 
-packet_hdr_t *bd_bt_packet_wrap()
+packet_hdr_t *bd_bt_packet_wrap(int cmdId, int version, int size, uint8_t *payload)
 {
     packet_hdr_t *packet = malloc(sizeof(packet_hdr_t));
     if (!packet)
@@ -22,7 +22,9 @@ packet_hdr_t *bd_bt_packet_wrap()
     packet->reserve = 0x0;//reserve errorFlag ackFlag version
     packet->err_flag = 0x0;
     packet->ack_flag = 0x0;
-    packet->version = 0x0;
+    uint8_t ver = (uint8_t) (version & 0x000F);
+    loge("---ver=%02x", ver);
+    packet->version = (uint8_t) (version < 0 ? 0 : ver);
 //    data[0] = 0xab;//magic
 //    data[1] = 0x00;//reserve errorFlag ackFlag version
 //    data[2] = 0x00;//payload length
@@ -41,44 +43,37 @@ packet_hdr_t *bd_bt_packet_wrap()
 
     int i= 0;
     uint8_t *buf = (uint8_t *) packet;
-    for (i = 0; i < 8; i++)
+/*    for (i = 0; i < 8; i++)
     {
         loge("i=%d 0x%02x", i, (buf[i]));
-    }
+    }*/
 
-    if (data_len >= 2)
+    //if (data_len >= 2)
+    if (cmdId > 0)
     {
-        packet->data_hdr = malloc(sizeof(data_hdr_t));
-        if (!packet->data_hdr)
-        {
-            free(packet);
-            loge("%s malloc failed", __func__);
-            return NULL;
-        }
-        packet->data_hdr->cmd_id = 0x06;//cmd id
-        packet->data_hdr->version = 0x00;//version 4bits
-        packet->data_hdr->reserve = 0x00;//reserve 4bits
-        buf = (uint8_t *) packet->data_hdr;
-        for (i = 0; i < 2; i++)
+        packet->cmd_id = (uint8_t) (cmdId & 0x00FF);//0x06;//cmd id
+        loge("cmd id=%02x", packet->cmd_id);
+        packet->data_hdr_version = 0x00;//version 4bits
+        packet->data_hdr_reserve = 0x00;//reserve 4bits
+   /*     for (i = 0; i < 2; i++)
         {
             logw("i=%d 0x%02x", i, (buf[i]));
-        }
+        }*/
 
-        if (data_len>2)
+        if ((size > 2) && !payload)
         {
-            packet->data_hdr->data = malloc(sizeof(data_t));
-            if (!packet->data_hdr->data)
+            packet->key_value = malloc(size);
+            if (!packet->key_value)
             {
-                free(packet->data_hdr);
                 free(packet);
                 loge("%s malloc failed", __func__);
                 return NULL;
             }
-            packet->data_hdr->data->key = 0x10;//key
-            packet->data_hdr->data->key_hdr_reserve= 0x0;//key header,7bit
-            packet->data_hdr->data->key_hdr_value_len = 0x00;//key header, 9bit
-            buf = (uint8_t *) packet->data_hdr->data;
-            for (i = 0; i < 3; i++)
+
+            packet->key = 0x10;//key
+            packet->key_hdr_reserve= 0x0;//key header,7bit
+            packet->key_hdr_value_len = 0x00;//key header 9bit, key value length
+            for (i = 0; i < 13; i++)
             {
                 logi("i=%d 0x%02x", i, (buf[i]));
             }

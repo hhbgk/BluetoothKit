@@ -61,12 +61,60 @@ static void jni_init(JNIEnv *env, jobject thiz){
     }
 }
 
-static jbyteArray jni_bt_wrap(JNIEnv *env, jobject thiz)
+static void jni_bt_set_data(JNIEnv *env, jobject thiz, jobject jPayloadInfo)
 {
-    packet_hdr_t *data = bd_bt_packet_wrap();
+    logi("%s", __func__);
+    jclass cls_payloadInfo = (*env)->GetObjectClass(env, jPayloadInfo);
+    //method in class PayloadInfo
+    jmethodID m_getValue = (*env)->GetMethodID(env, cls_payloadInfo, "getValue", "()Landroid/util/SparseArray;");
+    jobject jSparseArray = (jobject) (*env)->CallObjectMethod(env, jPayloadInfo, m_getValue);
+
+    jclass cls_sparseArray = (*env)->FindClass(env, "android/util/SparseArray");
+    jmethodID m_size = (*env)->GetMethodID(env, cls_sparseArray, "size", "()I");
+    int size = (*env)->CallIntMethod(env, jSparseArray, m_size);
+    loge("Size===%d", size);
+
+    jmethodID m_keyAt = (*env)->GetMethodID(env, cls_sparseArray, "keyAt", "(I)I");
+    jmethodID m_get = (*env)->GetMethodID(env, cls_sparseArray, "get", "(I)Ljava/lang/Object;");
+
+    for (int i = 0; i < size; ++i) {
+        int key = (*env)->CallIntMethod(env, jSparseArray, m_keyAt, i);
+        jobjectArray valueArray = (*env)->CallObjectMethod(env, jSparseArray, m_get, i);
+        if (valueArray != NULL)
+        {
+            loge("valueArray----");
+            size = (*env)->GetArrayLength(env, valueArray);
+        }
+        logi("key=0x%02x, valueArray=%d", key, size);
+    }
+
+}
+
+static jbyteArray jni_bt_wrap(JNIEnv *env, jobject thiz, jint cmdId, jint version, jbyteArray jarray)
+{
+    int size = 0;
+    uint8_t *cArray = NULL;
+    int total_size = 8;//L1 header
+    if (cmdId > 0)
+    {
+        total_size += 2;//L2 packet header
+    }
+
+    if (jarray != NULL)
+    {
+        size = (*env)->GetArrayLength(env, jarray);
+        total_size += size;
+        cArray = (uint8_t *) (*env)->GetByteArrayElements(env, jarray, NULL);
+        (*env)->ReleaseByteArrayElements(env, jarray, (jbyte *) cArray, NULL);
+    }
+
+    packet_hdr_t *data = bd_bt_packet_wrap(cmdId, version, size, cArray);
+
     uint8_t *buf = (uint8_t *) data;
-    jbyteArray jbyteArray1 = (*env)->NewByteArray(env, 13);
-    (*env)->SetByteArrayRegion(env, jbyteArray1, 0, 13, (const jbyte *) buf);
+    loge("total_size=%02x, size=%d", total_size, size);
+    jbyteArray jbyteArray1 = (*env)->NewByteArray(env, total_size);
+    (*env)->SetByteArrayRegion(env, jbyteArray1, 0, total_size, (const jbyte *) buf);
+
     return jbyteArray1;
 }
 
@@ -92,7 +140,8 @@ static jchar jni_getCrc16(JNIEnv *env, jobject thiz, jchar startPosition, jbyteA
 static JNINativeMethod g_methods[] =
 {
         {"nativeInit", "()V", (void*) jni_init},
-        {"nativeWrap", "()[B", (void*) jni_bt_wrap},
+        {"nativeWrap", "(II[B)[B", (void*) jni_bt_wrap},
+        {"nativeSetData", "(Lcom/demuxer/PayloadInfo;)V", (void*) jni_bt_set_data},
  //       {"nativeGetCrc16", "(S[BI)C", (void*) jni_getCrc16},
 };
 

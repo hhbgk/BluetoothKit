@@ -1,45 +1,68 @@
 package com.demuxer;
 
+import android.util.SparseArray;
+
+import java.util.List;
+
 /**
  * Created by bob on 17-1-13.
  */
 
 public class PayloadInfo {
-    private byte key;//1byte
-    private int reserve;//7bits
-    private int valueLength;//9bits
+    private int CommandId;//8bit
+    private int version;//4bit
+    private int headerReserve;//4bit
+    private byte[] payload;
+    private SparseArray<byte[]> keyValue;
+    private List<KeyInfo> keyInfo;
 
-    private byte[] value;//N bytes
-
-    public byte getKey() {
-        return key;
+    public int getVersion() {
+        return version;
     }
 
-    public void setKey(byte key) {
-        this.key = key;
+    public void setVersion(int version) {
+        this.version = version;
     }
 
-    public int getReserve() {
-        return reserve;
+    public int getCommandId() {
+        return CommandId;
     }
 
-    public void setReserve(int reserve) {
-        this.reserve = reserve;
+    public void setCommandId(int commandId) {
+        CommandId = commandId;
     }
 
-    public int getValueLength() {
-        return valueLength;
+    int getHeaderReserve() {
+        return headerReserve;
     }
 
-    public void setValueLength(int valueLength) {
-        this.valueLength = valueLength;
+    void setHeaderReserve(int headerReserve) {
+        this.headerReserve = headerReserve;
     }
 
-    public byte[] getValue() {
-        return value;
+    public byte[] getPayload() {
+        return payload;
     }
 
-    public void setValue(byte[] value) {
-        this.value = value;
+    public void setPayload(byte[] payload) {
+        this.payload = payload;
+    }
+
+    public SparseArray<byte[]> getValue() {
+        return keyValue;
+    }
+
+    public void setValue(SparseArray<byte[]> sparseArray) {
+        this.keyValue = sparseArray;
+//        sparseArray.get;
+
+    }
+
+    public List<KeyInfo> getKeyInfo() {
+        return keyInfo;
+    }
+
+    public void setKeyInfo(List<KeyInfo> keyInfo) {
+        this.keyInfo = keyInfo;
     }
 }

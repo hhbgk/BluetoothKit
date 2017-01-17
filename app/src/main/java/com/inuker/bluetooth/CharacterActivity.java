@@ -4,11 +4,15 @@ import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
+import android.util.SparseArray;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 
+import com.demuxer.BtBandManager;
+import com.demuxer.KeyInfo;
+import com.demuxer.PayloadInfo;
 import com.inuker.bluetooth.library.connect.listener.BleConnectStatusListener;
 import com.inuker.bluetooth.library.connect.response.BleNotifyResponse;
 import com.inuker.bluetooth.library.connect.response.BleReadResponse;
@@ -17,6 +21,8 @@ import com.inuker.bluetooth.library.connect.response.BleWriteResponse;
 import com.inuker.bluetooth.library.utils.BluetoothLog;
 import com.inuker.bluetooth.library.utils.ByteUtils;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 import static com.inuker.bluetooth.library.Constants.REQUEST_SUCCESS;
@@ -158,6 +164,24 @@ public class CharacterActivity extends Activity implements View.OnClickListener 
                     data[11] = 0x00;//key header
                     data[12] = 0x00;//key header
                 } else {
+                    PayloadInfo payloadInfo = new PayloadInfo();
+                    payloadInfo.setCommandId(6);
+                    payloadInfo.setVersion(9);
+
+                    List<KeyInfo> list = new ArrayList<>();
+                    KeyInfo keyInfo = new KeyInfo();
+                    keyInfo.setKey(0x10);
+                    keyInfo.setValue(null);
+                    list.add(keyInfo);
+                    payloadInfo.setKeyInfo(list);
+
+                    SparseArray<byte[]> sparseArray = new SparseArray<>();
+                    sparseArray.put(0x10, null);
+                    payloadInfo.setValue(sparseArray);
+
+                    payloadInfo.setPayload(new byte[]{0x10, 0x00, 0x00});
+                    data=BtBandManager.getInstance().wrapData(payloadInfo);
+                    /*
                     data = new byte[13];
                     data[0] = (byte) 0xab;//magic
                     data[1] = 0x00;//reserve errorFlag ackFlag version
@@ -173,6 +197,7 @@ public class CharacterActivity extends Activity implements View.OnClickListener 
                     data[10] = 0x10;//key
                     data[11] = 0x00;//key header
                     data[12] = 0x00;//key header
+                    */
                 }
 
 

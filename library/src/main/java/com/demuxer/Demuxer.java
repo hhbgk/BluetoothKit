@@ -105,8 +105,7 @@ public class Demuxer {
             return null;
         }
 
-        List<PayloadInfo> list = new ArrayList<>();
-
+/*
         int position = 0;
         while (position < data.length) {
             PayloadInfo payloadInfo = new PayloadInfo();
@@ -125,7 +124,8 @@ public class Demuxer {
 
             position += (1 + 2 + payloadInfo.getValueLength());
         }
-
+*/
+        List<PayloadInfo> list = new ArrayList<>();
         return list;
     }
 }
