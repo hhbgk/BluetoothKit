@@ -25,7 +25,7 @@ typedef struct {
 }data_hdr_t;
 
 //L1 packet(8-512)
-typedef struct {
+typedef struct packet_hdr{
     uint8_t magic;//8 bit
     uint8_t reserve:2;//2 bit
     uint8_t err_flag:1;
@@ -36,5 +36,7 @@ typedef struct {
     uint16_t seq_id;
     data_hdr_t *data_hdr;
 }packet_hdr_t;
+
+packet_hdr_t * bd_bt_packet_wrap();
 
 #endif //BLUETOOTHKIT_BT_PACKET_H

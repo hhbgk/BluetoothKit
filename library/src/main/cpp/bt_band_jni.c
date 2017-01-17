@@ -2,11 +2,13 @@
 // Created by bob on 17-1-16.
 //
 
-#include <stdio.h>
+#include <stdlib.h>
 #include <android/log.h>
 #include <jni.h>
 #include <assert.h>
+#include <inttypes.h>
 #include "debug.h"
+#include "bt_packet.h"
 
 #define JNI_CLASS "com/demuxer/BtBandManager"
 #define NELEM(x) ((int) (sizeof(x) / sizeof((x)[0])))
@@ -59,6 +61,15 @@ static void jni_init(JNIEnv *env, jobject thiz){
     }
 }
 
+static jbyteArray jni_bt_wrap(JNIEnv *env, jobject thiz)
+{
+    packet_hdr_t *data = bd_bt_packet_wrap();
+    uint8_t *buf = (uint8_t *) data;
+    jbyteArray jbyteArray1 = (*env)->NewByteArray(env, 13);
+    (*env)->SetByteArrayRegion(env, jbyteArray1, 0, 13, (const jbyte *) buf);
+    return jbyteArray1;
+}
+
 static inline uint16_t crc16_byte(uint16_t crc, const uint8_t data)
 {
     return (crc >> 8) ^ crc16_table[(crc ^ data) & 0xff];
@@ -81,7 +92,8 @@ static jchar jni_getCrc16(JNIEnv *env, jobject thiz, jchar startPosition, jbyteA
 static JNINativeMethod g_methods[] =
 {
         {"nativeInit", "()V", (void*) jni_init},
-        {"nativeGetCrc16", "(S[BI)C", (void*) jni_getCrc16},
+        {"nativeWrap", "()[B", (void*) jni_bt_wrap},
+ //       {"nativeGetCrc16", "(S[BI)C", (void*) jni_getCrc16},
 };
 
 jint JNI_OnLoad(JavaVM *vm, void *reserved)

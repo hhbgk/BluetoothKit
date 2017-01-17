@@ -16,7 +16,6 @@ import com.inuker.bluetooth.library.connect.response.BleUnnotifyResponse;
 import com.inuker.bluetooth.library.connect.response.BleWriteResponse;
 import com.inuker.bluetooth.library.utils.BluetoothLog;
 import com.inuker.bluetooth.library.utils.ByteUtils;
-import com.inuker.bluetooth.library.utils.Utils;
 
 import java.util.UUID;
 
@@ -143,7 +142,6 @@ public class CharacterActivity extends Activity implements View.OnClickListener 
             case R.id.write:
                 byte[] data;
                 if (isWriteSuccess){
-                    byte[] crc = new byte[6];
                     data = new byte[13];
                     data[0] = (byte) 0xab;//magic
                     data[1] = 0x00;//reserve errorFlag ackFlag version
@@ -151,15 +149,8 @@ public class CharacterActivity extends Activity implements View.OnClickListener 
                     data[3] = 0x05;//payload length
                     data[6] = 0x01;//seq id
                     data[7] = 0x3c;//seq id
-                    System.arraycopy(data, 0, crc, 0, 4);
-                    System.arraycopy(data, 6, crc, 4, 1);
-                    System.arraycopy(data, 7, crc, 5, 1);
-                    short crc16 = Utils.getCrc16(crc);
-                    data[4] = (byte) (crc16 >> 8);
-                    data[5] = (byte) (crc16 & 0x0F);
-//                    data[4] = 0x01;//crc16[0];//
-//                    data[5] = 0x68;//crc16[1];
-
+                    data[4] = 0x01;//crc16[0];//
+                    data[5] = 0x68;//crc16[1];
 
                     data[8] = 0x06;//cmd id
                     data[9] = 0x00;//version 4bits & reserve 4bits
@@ -168,21 +159,14 @@ public class CharacterActivity extends Activity implements View.OnClickListener 
                     data[12] = 0x00;//key header
                 } else {
                     data = new byte[13];
-                    byte[] crc = new byte[6];
                     data[0] = (byte) 0xab;//magic
                     data[1] = 0x00;//reserve errorFlag ackFlag version
                     data[2] = 0x00;//payload length
                     data[3] = 0x05;//payload length
+                    data[4] = (byte) 0xc5;//crc16[0];//
+                    data[5] = (byte) 0x89;//crc16[1];
                     data[6] = 0x00;//seq id
                     data[7] = 0x1e;//seq id
-                    System.arraycopy(data, 0, crc, 0, 4);
-                    System.arraycopy(data, 6, crc, 4, 1);
-                    System.arraycopy(data, 7, crc, 5, 1);
-                    short crc16 = Utils.getCrc16(crc);
-                    data[4] = (byte) (crc16 >> 8);
-                    data[5] = (byte) (crc16 & 0x0F);
-//                    data[4] = (byte) 0xc5;//crc16[0];//
-//                    data[5] = (byte) 0x89;//crc16[1];
 
                     data[8] = 0x06;//cmd id
                     data[9] = 0x00;//version 4bits & reserve 4bits
