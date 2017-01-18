@@ -11,7 +11,6 @@ import android.widget.EditText;
 import android.widget.TextView;
 
 import com.demuxer.BtBandManager;
-import com.demuxer.KeyInfo;
 import com.demuxer.PayloadInfo;
 import com.inuker.bluetooth.library.connect.listener.BleConnectStatusListener;
 import com.inuker.bluetooth.library.connect.response.BleNotifyResponse;
@@ -21,8 +20,6 @@ import com.inuker.bluetooth.library.connect.response.BleWriteResponse;
 import com.inuker.bluetooth.library.utils.BluetoothLog;
 import com.inuker.bluetooth.library.utils.ByteUtils;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 
 import static com.inuker.bluetooth.library.Constants.REQUEST_SUCCESS;
@@ -148,7 +145,13 @@ public class CharacterActivity extends Activity implements View.OnClickListener 
             case R.id.write:
                 byte[] data;
                 if (isWriteSuccess){
-                    data = new byte[13];
+                    PayloadInfo payloadInfo = new PayloadInfo();
+                    payloadInfo.setCommandId(0x06);
+                    SparseArray<byte[]> sparseArray = new SparseArray<>();
+                    sparseArray.put(0x06, null);
+                    payloadInfo.setValue(sparseArray);
+                    data = BtBandManager.getInstance().wrapData(payloadInfo);
+                 /*   data = new byte[13];
                     data[0] = (byte) 0xab;//magic
                     data[1] = 0x00;//reserve errorFlag ackFlag version
                     data[2] = 0x00;//payload length
@@ -162,25 +165,16 @@ public class CharacterActivity extends Activity implements View.OnClickListener 
                     data[9] = 0x00;//version 4bits & reserve 4bits
                     data[10] = 0x06;//key
                     data[11] = 0x00;//key header
-                    data[12] = 0x00;//key header
+                    data[12] = 0x00;//key header*/
                 } else {
+
+//                    data= new byte[2];
                     PayloadInfo payloadInfo = new PayloadInfo();
-                    payloadInfo.setCommandId(6);
-                    payloadInfo.setVersion(9);
-
-                    List<KeyInfo> list = new ArrayList<>();
-                    KeyInfo keyInfo = new KeyInfo();
-                    keyInfo.setKey(0x10);
-                    keyInfo.setValue(null);
-                    list.add(keyInfo);
-                    payloadInfo.setKeyInfo(list);
-
+                    payloadInfo.setCommandId(0x06);
                     SparseArray<byte[]> sparseArray = new SparseArray<>();
                     sparseArray.put(0x10, null);
                     payloadInfo.setValue(sparseArray);
-
-                    payloadInfo.setPayload(new byte[]{0x10, 0x00, 0x00});
-                    data=BtBandManager.getInstance().wrapData(payloadInfo);
+                    data = BtBandManager.getInstance().wrapData(payloadInfo);
                     /*
                     data = new byte[13];
                     data[0] = (byte) 0xab;//magic
@@ -213,18 +207,7 @@ public class CharacterActivity extends Activity implements View.OnClickListener 
                 break;
         }
     }
-    public static byte[] calculate(byte[] buff, int start, int end) {
-        int crcShort = 0;
-        for (int i = start; i <= end; i++) {
-            crcShort = ((crcShort  >>> 8) | (crcShort  << 8) )& 0xffff;
-            crcShort ^= (buff[i] & 0xff);
-            crcShort ^= ((crcShort & 0xff) >> 4);
-            crcShort ^= (crcShort << 12) & 0xffff;
-            crcShort ^= ((crcShort & 0xFF) << 5) & 0xffff;
-        }
-        crcShort &= 0xffff;
-        return new byte[] {(byte) (crcShort & 0xff), (byte) ((crcShort >> 8) & 0xff)};
-    }
+
     private final BleConnectStatusListener mConnectStatusListener = new BleConnectStatusListener() {
         @Override
         public void onConnectStatusChanged(String mac, int status) {

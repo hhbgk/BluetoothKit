@@ -6,7 +6,6 @@ import android.view.View;
 import android.widget.TextView;
 
 import com.demuxer.BtBandManager;
-import com.demuxer.PayloadInfo;
 import com.inuker.bluetooth.library.beacon.Beacon;
 import com.inuker.bluetooth.library.connect.listener.BluetoothStateListener;
 import com.inuker.bluetooth.library.search.SearchRequest;
@@ -34,10 +33,6 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        PayloadInfo payloadInfo = new PayloadInfo();
-        payloadInfo.setCommandId(6);
-        payloadInfo.setVersion(9);
-        payloadInfo.setPayload(null);
         BtBandManager.getInstance();//.wrapData(payloadInfo);
 
         mDevices = new ArrayList<SearchResult>();

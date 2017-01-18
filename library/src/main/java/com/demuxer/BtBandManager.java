@@ -1,7 +1,5 @@
 package com.demuxer;
 
-import android.util.SparseArray;
-
 /**
  * Created by bob on 17-1-16.
  */
@@ -9,6 +7,7 @@ import android.util.SparseArray;
 public class BtBandManager {
     String tag = getClass().getSimpleName();
     private static BtBandManager instance = null;
+    private int mVersion;
 
     public static BtBandManager getInstance(){
         if (instance == null){
@@ -28,17 +27,13 @@ public class BtBandManager {
         for (int i = 0; i < data.length; i++){
             Log.e(tag, String.format(Locale.US, "0x%x", data[i]));
         }*/
-        PayloadInfo payloadInfo = new PayloadInfo();
+        /*PayloadInfo payloadInfo = new PayloadInfo();
+        payloadInfo.setCommandId(0x06);
         SparseArray<byte[]> sparseArray = new SparseArray<>();
-        byte[] bytes = new byte[1];
-        bytes[0] = 1;
-        sparseArray.put(0x10, bytes);
-        bytes[0] = 3;
-        sparseArray.put(0x11, bytes);
-        bytes[0] = 5;
-        sparseArray.put(0x12, bytes);
+        sparseArray.put(0x06, null);
         payloadInfo.setValue(sparseArray);
-        nativeSetData(payloadInfo);
+        nativeWrapData(payloadInfo, mVersion);
+        */
     }
 
     public byte[] wrapData(PayloadInfo payloadInfo, int version){
@@ -46,11 +41,20 @@ public class BtBandManager {
             throw new NullPointerException("payloadInfo can not be null");
         }
 
-        return nativeWrap(payloadInfo.getCommandId(), payloadInfo.getVersion(), payloadInfo.getPayload());
+//        return nativeWrap(payloadInfo.getCommandId(), payloadInfo.getVersion(), payloadInfo.getPayload());
+        return nativeWrapData(payloadInfo, version);
     }
 
     public byte[] wrapData(PayloadInfo payloadInfo){
-        return wrapData(payloadInfo, 0);
+        return wrapData(payloadInfo, mVersion);
+    }
+
+    private void setVersion(int version){
+        mVersion = version;
+    }
+
+    public int getVersion(){
+        return mVersion;
     }
     static {
         System.loadLibrary("bt_band");
@@ -59,5 +63,5 @@ public class BtBandManager {
     private native void nativeInit();
     //private native void nativeGetCrc16();
     private native byte[] nativeWrap(int cmdId, int version, byte[] payload);
-    private native void nativeSetData(PayloadInfo payloadInfo);
+    private native byte[] nativeWrapData(PayloadInfo payloadInfo, int version);
 }
