@@ -11,8 +11,8 @@
 //payload
 typedef struct {
     uint8_t key;
-    uint16_t key_hdr_reserve:7;
-    uint16_t key_hdr_value_len:9;
+    uint16_t reserve:7;
+    uint16_t value_len:9;
     uint8_t *value;
 }key_value_t;
 
@@ -22,7 +22,7 @@ typedef struct {
     uint8_t version:4;
     uint8_t reserve:4;
     key_value_t *data;
-}data_hdr_t;
+}payload_hdr_t;
 
 //L1 packet(8-512)
 typedef struct packet_hdr{
@@ -36,8 +36,8 @@ typedef struct packet_hdr{
     uint16_t seq_id;
     //data_hdr_t *data_hdr;
     uint8_t cmd_id;
-    uint8_t data_hdr_version:4;
-    uint8_t data_hdr_reserve:4;
+    uint8_t payload_version:4;
+    uint8_t payload_reserve:4;
     //data_t *data;
     /*uint8_t key;
     uint16_t key_hdr_reserve:7;

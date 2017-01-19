@@ -63,8 +63,9 @@ packet_hdr_t *bd_bt_create_packet(void)
 void bd_bt_set_version(packet_hdr_t *packet, int version)
 {
     assert(packet != NULL);
-    uint8_t ver = (uint8_t) (version & 0x000F);
-    packet->version = (uint8_t) (version < 0 ? 0 : ver);
+    //uint8_t ver = (uint8_t) (version & 0x0F);
+    packet->version = (uint8_t) (version & 0x0F);//(uint8_t) (version < 0 ? 0 : ver);
+    logw("version=%02x", packet->version);
 }
 void bd_bt_set_payload_length(packet_hdr_t *packet, uint16_t payload_len)
 {
@@ -78,17 +79,17 @@ void bd_bt_set_key_value(packet_hdr_t *packet, int key, uint8_t *value, size_t s
     {
         key_value_t *key_value = calloc(1, sizeof(key_value_t));
         key_value->key = (uint8_t) (key & 0xFF);
-        key_value->key_hdr_reserve = 0x0;
-        key_value->key_hdr_value_len = (uint16_t) (size & 0x1F);
-        if (value == NULL || size == 0)
-        {
-            logw("%s: value is null", __func__);
-        }
-        else
+        key_value->reserve = 0x0;
+        key_value->value_len = (uint16_t) (size & 0x1F);
+        if (value && size > 0)
         {
             key_value->value = calloc(size, sizeof(uint8_t));
 
             memcpy(key_value->value, value, size);
+        }
+        else
+        {
+            logw("%s: value is null", __func__);
         }
         queue_put(packet->q_value, key_value);
     }
@@ -100,15 +101,17 @@ void bd_bt_set_key_value(packet_hdr_t *packet, int key, uint8_t *value, size_t s
 
 void bd_bt_set_magic(packet_hdr_t *packet, int magic)
 {
-    packet->magic = (uint8_t) (magic & 0xFF);//magic
+    packet->magic = (uint8_t) (magic & 0xFF);
 }
 void bd_bt_set_err_flag(packet_hdr_t *packet, int errFlag)
 {
     packet->err_flag = (uint8_t) (errFlag & 0x01);
+    logw("err flag %02x", packet->err_flag);
 }
 void bd_bt_set_ack_flag(packet_hdr_t *packet, int ackFlag)
 {
     packet->ack_flag = (uint8_t) (ackFlag & 0x01);
+    logw("ack flag=%02x", packet->ack_flag);
 }
 
 static uint16_t crc16_byte(uint16_t crc, const uint8_t data)
@@ -125,7 +128,7 @@ uint16_t bd_crc16(uint16_t crc, uint8_t const *buffer, uint16_t len)
 //CRC只计算L1的payload, 即L2数据
 void bd_bt_set_crc16(packet_hdr_t *packet, uint8_t *buf, int size)
 {
-    uint16_t crc = bd_crc16(0, buf, size);
+    uint16_t crc = bd_crc16(0, buf, 0x05);
     packet->crc16 = (crc >> 8 )| ( crc<<8 );
 }
 void bd_bt_set_seq_id(packet_hdr_t *packet, int seqId)
@@ -135,8 +138,8 @@ void bd_bt_set_seq_id(packet_hdr_t *packet, int seqId)
 }
 void bd_bt_set_cmdId_version(packet_hdr_t *packet, int cmdId, int version)
 {
-    packet->cmd_id = (uint8_t) (cmdId & 0x0F);
-    packet->data_hdr_version = (uint8_t) (version & 0x08);
+    packet->cmd_id = (uint8_t) (cmdId & 0xFF);
+    packet->payload_version = (uint8_t) (version & 0xF0);
 }
 packet_hdr_t *bd_bt_packet_wrap(int cmdId, int version, int size, uint8_t *payload)
 {
