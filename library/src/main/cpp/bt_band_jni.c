@@ -6,7 +6,6 @@
 #include <android/log.h>
 #include <jni.h>
 #include <assert.h>
-#include <inttypes.h>
 #include "debug.h"
 #include "bt_packet.h"
 
@@ -17,12 +16,14 @@ static JavaVM *gJVM = NULL;
 static jobject gObj = NULL;
 static packet_hdr_t g_data = {0};
 
-static void jni_init(JNIEnv *env, jobject thiz){
+static void jni_init(JNIEnv *env, jobject thiz)
+{
     logi("%s", __func__);
     (*env)->GetJavaVM(env, &gJVM);
     gObj = (*env)->NewGlobalRef(env, thiz);
     jclass clazz = (*env)->GetObjectClass(env, thiz);
-    if(clazz == NULL){
+    if(clazz == NULL)
+    {
         (*env)->ThrowNew(env, "java/lang/NullPointerException", "Unable to find exception class");
     }
 }
@@ -44,9 +45,9 @@ static jbyteArray jni_bt_wrap_data(JNIEnv *env, jobject thiz, jobject jPayloadIn
     memset(packet, 0, sizeof(packet_hdr_t));
     packet->q_value = queue_create();
     bd_bt_set_magic(packet, 0xab);
-    bd_bt_set_err_flag(packet, 0x1);
+    bd_bt_set_err_flag(packet, 0x0);
     bd_bt_set_ack_flag(packet, 0x1);
-    bd_bt_set_version(packet, 0x3);
+    bd_bt_set_version(packet, version);
 
     bd_bt_set_seq_id(packet, 0x1e00);
     jclass cls_payloadInfo = (*env)->GetObjectClass(env, jPayloadInfo);

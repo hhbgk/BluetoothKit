@@ -52,21 +52,9 @@ packet_hdr_t *bd_bt_create_packet(void)
         loge("%s malloc failed", __func__);
         return NULL;
     }
-
-    packet->magic = 0xab;//magic
-    packet->reserve = 0x0;//reserve errorFlag ackFlag version
-    packet->err_flag = 0x0;
-    packet->ack_flag = 0x0;
     return packet;
 }
 
-void bd_bt_set_version(packet_hdr_t *packet, int version)
-{
-    assert(packet != NULL);
-    //uint8_t ver = (uint8_t) (version & 0x0F);
-    packet->version = (uint8_t) (version & 0x0F);//(uint8_t) (version < 0 ? 0 : ver);
-    logw("version=%02x", packet->version);
-}
 void bd_bt_set_payload_length(packet_hdr_t *packet, uint16_t payload_len)
 {
     assert(packet != NULL);
@@ -106,12 +94,23 @@ void bd_bt_set_magic(packet_hdr_t *packet, int magic)
 void bd_bt_set_err_flag(packet_hdr_t *packet, int errFlag)
 {
     packet->err_flag = (uint8_t) (errFlag & 0x01);
-    logw("err flag %02x", packet->err_flag);
+//    packet->res_err_ack_version = (uint8_t) (errFlag & 0x01)<<5;
+//    logw("%s, %02x",__func__, packet->res_err_ack_version);
 }
 void bd_bt_set_ack_flag(packet_hdr_t *packet, int ackFlag)
 {
     packet->ack_flag = (uint8_t) (ackFlag & 0x01);
-    logw("ack flag=%02x", packet->ack_flag);
+//    packet->res_err_ack_version = (uint8_t) (ackFlag & 0x01)<<4;
+//    logw("%s, %02x",__func__, packet->res_err_ack_version);
+}
+
+void bd_bt_set_version(packet_hdr_t *packet, int version)
+{
+    assert(packet != NULL);
+    //uint8_t ver = (uint8_t) (version & 0x0F);
+    packet->version = (uint8_t) (version & 0x0F);//(uint8_t) (version < 0 ? 0 : ver);
+//    packet->res_err_ack_version = (uint8_t) (version & 0x0F);
+//    logw("%s, %02x",__func__, packet->res_err_ack_version);
 }
 
 static uint16_t crc16_byte(uint16_t crc, const uint8_t data)
@@ -149,15 +148,6 @@ packet_hdr_t *bd_bt_packet_wrap(int cmdId, int version, int size, uint8_t *paylo
         loge("%s malloc failed", __func__);
         return NULL;
     }
-
-    packet->magic = 0xab;//magic
-    packet->reserve = 0x0;//reserve errorFlag ackFlag version
-    packet->err_flag = 0x0;
-    packet->ack_flag = 0x0;
-    uint8_t ver = (uint8_t) (version & 0x000F);
-    loge("%s---ver=%02x", __func__, ver);
-    packet->version = (uint8_t) (version < 0 ? 0 : ver);
-
 //    data[0] = 0xab;//magic
 //    data[1] = 0x00;//reserve errorFlag ackFlag version
 //    data[2] = 0x00;//payload length
