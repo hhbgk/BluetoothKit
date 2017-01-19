@@ -64,7 +64,6 @@ void bd_bt_set_version(packet_hdr_t *packet, int version)
 {
     assert(packet != NULL);
     uint8_t ver = (uint8_t) (version & 0x000F);
-    loge("---ver=%02x", ver);
     packet->version = (uint8_t) (version < 0 ? 0 : ver);
 }
 void bd_bt_set_payload_length(packet_hdr_t *packet, uint16_t payload_len)
@@ -153,7 +152,7 @@ packet_hdr_t *bd_bt_packet_wrap(int cmdId, int version, int size, uint8_t *paylo
     packet->err_flag = 0x0;
     packet->ack_flag = 0x0;
     uint8_t ver = (uint8_t) (version & 0x000F);
-    loge("---ver=%02x", ver);
+    loge("%s---ver=%02x", __func__, ver);
     packet->version = (uint8_t) (version < 0 ? 0 : ver);
 
 //    data[0] = 0xab;//magic

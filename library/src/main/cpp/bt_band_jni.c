@@ -68,14 +68,14 @@ static jbyteArray jni_bt_wrap_data(JNIEnv *env, jobject thiz, jobject jPayloadIn
 
     int total_size = 8;//L1 header
     uint16_t payload_len = 0x0;
-
+    int sparse_size = 0;//key value size
+    jmethodID m_get = NULL;
+    jmethodID m_keyAt = NULL;
+    int cmd_id;
+    uint8_t *payload = NULL;
     packet_hdr_t *packet = &g_data;
     assert(packet != NULL);
-    if (!packet)
-    {
-        loge("%s g_data is null", __func__);
-        return NULL;
-    }
+
     memset(packet, 0, sizeof(packet_hdr_t));
     packet->q_value = queue_create();
     bd_bt_set_magic(packet, 0xab);
@@ -91,21 +91,26 @@ static jbyteArray jni_bt_wrap_data(JNIEnv *env, jobject thiz, jobject jPayloadIn
     jmethodID m_getCommandId = (*env)->GetMethodID(env, cls_payloadInfo, "getCommandId", "()I");
 
     jobject jSparseArray = (jobject) (*env)->CallObjectMethod(env, jPayloadInfo, m_getValue);
-    jclass cls_sparseArray = (*env)->FindClass(env, "android/util/SparseArray");
-    jmethodID m_keyAt = (*env)->GetMethodID(env, cls_sparseArray, "keyAt", "(I)I");
-    jmethodID m_get = (*env)->GetMethodID(env, cls_sparseArray, "get", "(I)Ljava/lang/Object;");
-    jmethodID m_size = (*env)->GetMethodID(env, cls_sparseArray, "size", "()I");
-    int sparse_size = (*env)->CallIntMethod(env, jSparseArray, m_size);
-    loge("sparse_size===%d", sparse_size);
-
-    int cmdId = (*env)->CallIntMethod(env, jPayloadInfo, m_getCommandId);
-    if (cmdId > 0)
+    if (jSparseArray != NULL) {
+        jclass cls_sparseArray = (*env)->FindClass(env, "android/util/SparseArray");
+        m_keyAt = (*env)->GetMethodID(env, cls_sparseArray, "keyAt", "(I)I");
+        m_get = (*env)->GetMethodID(env, cls_sparseArray, "get", "(I)Ljava/lang/Object;");
+        jmethodID m_size = (*env)->GetMethodID(env, cls_sparseArray, "size", "()I");
+        sparse_size = (*env)->CallIntMethod(env, jSparseArray, m_size);
+        loge("sparse_size===%d", sparse_size);
+    }
+    else
     {
-        payload_len += 2;//L2 packet header
-        bd_bt_set_cmdId_version(packet, cmdId, 0x0);
+        logw("key value is empty");
     }
 
-    size_t value_len = 0;
+    cmd_id = (*env)->CallIntMethod(env, jPayloadInfo, m_getCommandId);
+    if (cmd_id >= 0)
+    {
+        payload_len += 2;//L2 packet header
+        bd_bt_set_cmdId_version(packet, cmd_id, 0x0);
+    }
+
     for (int i = 0; i < sparse_size; ++i)
     {
         int key = (*env)->CallIntMethod(env, jSparseArray, m_keyAt, i);
@@ -116,9 +121,9 @@ static jbyteArray jni_bt_wrap_data(JNIEnv *env, jobject thiz, jobject jPayloadIn
         if (jobjectArray1 != NULL)
         {
             uint8_t *pArray = (uint8_t *) (*env)->GetByteArrayElements(env, jobjectArray1, NULL);
-            value_len = (size_t) (*env)->GetArrayLength(env, jobjectArray1);
+            unsigned int value_len = (unsigned int)(*env)->GetArrayLength(env, jobjectArray1);
             payload_len += value_len;//key value byte
-            logw("len=%ud", value_len);
+            logw("len=%u", value_len);
             bd_bt_set_key_value(packet, key, pArray, value_len);
 
             for (int j = 0; j < value_len; ++j)
@@ -134,43 +139,50 @@ static jbyteArray jni_bt_wrap_data(JNIEnv *env, jobject thiz, jobject jPayloadIn
     }
     total_size += payload_len;
 
-    uint8_t *payload = calloc(payload_len, sizeof(uint8_t));
-    if (!payload)
+    if (payload_len > 0)
     {
-        loge("%s calloc failed", __func__);
-        return NULL;
+        payload = calloc(payload_len, sizeof(uint8_t));
+        if (!payload)
+        {
+            loge("%s calloc failed", __func__);
+            return NULL;
+        }
+        bd_bt_set_payload_length(packet, payload_len);
     }
-    bd_bt_set_payload_length(packet, payload_len);
 
     uint8_t *buf = (uint8_t *) packet;
-    int q_size = queue_elements(packet->q_value);
-    if (q_size == UINTX_MAX )
-    {
-        q_size = 0;
-    }
+    int q_size = queue_empty(packet->q_value) ? 0 : queue_elements(packet->q_value);
 
-    key_value_t *key_value;
+    key_value_t *key_value = NULL;
     for (int i = 0; i < q_size; ++i) {
         queue_get(packet->q_value, (void **) &key_value);
     }
 
-    uint8_t *key_value_buf = (uint8_t *) key_value;
-    memcpy(payload, buf+8, 2);
-    memcpy(payload+2, key_value_buf, 1+2+key_value->key_hdr_value_len);
-
-    bd_bt_set_crc16(packet, payload, payload_len);
-    logw("crc16=%02x", packet->crc16);
-
-    memcpy(buf + 10, key_value_buf, 1+2+key_value->key_hdr_value_len);
-    loge("total_size=%02x, payload_len=%d", total_size, payload_len);
-    for (int i = 0; i < 13; i++)
+    if (payload && buf)
     {
-        logi("i=%d 0x%02x", i, (buf[i]));
+        if (cmd_id >= 0)
+            memcpy(payload, buf+8, 2);
+
+        if (key_value != NULL)
+        {
+            uint8_t *key_value_buf = (uint8_t *) key_value;
+            memcpy(payload+2, key_value_buf, 1+2+key_value->key_hdr_value_len);
+            memcpy(buf + 10, key_value_buf, 1+2+key_value->key_hdr_value_len);
+        }
+
+        bd_bt_set_crc16(packet, payload, payload_len);
+        logw("crc16=%02x", packet->crc16);
+
+        for (int i = 0; i < payload_len; i++)
+        {
+            logw("payload i=%d 0x%02x", i, (payload[i]));
+        }
     }
 
-    for (int i = 0; i < payload_len; i++)
+    loge("total_size=%02x, payload_len=%d", total_size, payload_len);
+    for (int i = 0; i < total_size; i++)
     {
-        logw("payload i=%d 0x%02x", i, (payload[i]));
+        logi("i=%d 0x%02x", i, (buf[i]));
     }
     jbyteArray jbyteArray1 = (*env)->NewByteArray(env, total_size);
     (*env)->SetByteArrayRegion(env, jbyteArray1, 0, total_size, (const jbyte *) buf);
@@ -180,6 +192,7 @@ static jbyteArray jni_bt_wrap_data(JNIEnv *env, jobject thiz, jobject jPayloadIn
 
 static jbyteArray jni_bt_wrap(JNIEnv *env, jobject thiz, jint cmdId, jint version, jbyteArray jarray)
 {
+    logi("%s", __func__);
     int size = 0;
     uint8_t *cArray = NULL;
     int total_size = 8;//L1 header

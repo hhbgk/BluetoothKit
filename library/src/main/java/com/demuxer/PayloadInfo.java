@@ -3,7 +3,7 @@ package com.demuxer;
 import android.util.SparseArray;
 
 public class PayloadInfo {
-    private int CommandId;//8bit
+    private int CommandId = -1;//8bit
     private int headerVersion;//4bit
     private int headerReserve;//4bit
     private SparseArray<byte[]> keyValue;
