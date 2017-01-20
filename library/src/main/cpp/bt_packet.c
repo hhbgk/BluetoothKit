@@ -49,7 +49,7 @@ packet_hdr_t *bd_bt_create_packet(void)
     packet_hdr_t *packet = calloc(1, sizeof(packet_hdr_t));
     if (!packet)
     {
-        loge("%s malloc failed", __func__);
+        loge("%s calloc failed", __func__);
         return NULL;
     }
     return packet;
@@ -60,9 +60,9 @@ void bd_bt_set_payload_length(packet_hdr_t *packet, uint16_t payload_len)
     assert(packet != NULL);
     packet->payload_len = (payload_len >> 8 )|(payload_len<<8);
 }
-void bd_bt_set_key_value(packet_hdr_t *packet, int key, uint8_t *value, size_t size)
+void bd_bt_set_key_value(queue_t *q_value, int key, uint8_t *value, size_t size)
 {
-    assert(packet != NULL);
+    assert(q_value != NULL);
     if (key > 0)
     {
         key_value_t *key_value = calloc(1, sizeof(key_value_t));
@@ -79,7 +79,7 @@ void bd_bt_set_key_value(packet_hdr_t *packet, int key, uint8_t *value, size_t s
         {
             logw("%s: value is null", __func__);
         }
-        queue_put(packet->q_value, key_value);
+        queue_put(q_value, key_value);
     }
     else
     {

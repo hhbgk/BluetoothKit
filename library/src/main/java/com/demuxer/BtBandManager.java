@@ -1,9 +1,5 @@
 package com.demuxer;
 
-/**
- * Created by bob on 17-1-16.
- */
-
 public class BtBandManager {
     String tag = getClass().getSimpleName();
     private static BtBandManager instance = null;
@@ -23,16 +19,17 @@ public class BtBandManager {
 
     private BtBandManager(){
         nativeInit();
-       /* byte[] data = nativeWrap();
-        for (int i = 0; i < data.length; i++){
-            Log.e(tag, String.format(Locale.US, "0x%x", data[i]));
-        }*/
+       /*
         PayloadInfo payloadInfo = new PayloadInfo();
         payloadInfo.setCommandId(0x06);
-//        SparseArray<byte[]> sparseArray = new SparseArray<>();
-//        sparseArray.put(0x06, null);
-//        payloadInfo.setValue(sparseArray);
-        nativeWrapData(payloadInfo, mVersion);
+        SparseArray<byte[]> sparseArray = new SparseArray<>();
+//        sparseArray.put(0x06, new byte[]{5,4,3,2,1});
+        sparseArray.put(0x10, null);
+        payloadInfo.setValue(sparseArray);
+        byte[] data = nativeWrapData(payloadInfo, mVersion);
+        for (int i = 0; i < data.length; i++)
+            Log.e(tag, String.format(Locale.US, "%02x", data[i]));
+        */
     }
 
     public byte[] wrapData(PayloadInfo payloadInfo, int version){
@@ -40,7 +37,6 @@ public class BtBandManager {
             throw new NullPointerException("payloadInfo can not be null");
         }
 
-//        return nativeWrap(payloadInfo.getCommandId(), payloadInfo.getVersion(), payloadInfo.getPayload());
         return nativeWrapData(payloadInfo, version);
     }
 
@@ -55,13 +51,16 @@ public class BtBandManager {
     public int getVersion(){
         return mVersion;
     }
+
+    public boolean release(){
+        return nativeRelease();
+    }
     static {
         System.loadLibrary("queue");
         System.loadLibrary("bt_band");
     }
 
     private native void nativeInit();
-    //private native void nativeGetCrc16();
-    private native byte[] nativeWrap(int cmdId, int version, byte[] payload);
+    private native boolean nativeRelease();
     private native byte[] nativeWrapData(PayloadInfo payloadInfo, int version);
 }

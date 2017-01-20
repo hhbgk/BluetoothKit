@@ -15,6 +15,8 @@
 static JavaVM *gJVM = NULL;
 static jobject gObj = NULL;
 static packet_hdr_t g_data = {0};
+static queue_t *q_value;//for L2 payload of values
+static void destroy_queue_element(void *element);
 
 static void jni_init(JNIEnv *env, jobject thiz)
 {
@@ -30,7 +32,8 @@ static void jni_init(JNIEnv *env, jobject thiz)
 
 static jbyteArray jni_bt_wrap_data(JNIEnv *env, jobject thiz, jobject jPayloadInfo, jint version)
 {
-    logi("%s", __func__);
+    uint8_t *pp;
+    logi("%s: %d,%d, %d", __func__, sizeof(struct packet_hdr), sizeof(pp), sizeof(uint8_t*));
 
     uint16_t payload_len = 0x0;
     int total_size = 8;//L1 header
@@ -39,12 +42,12 @@ static jbyteArray jni_bt_wrap_data(JNIEnv *env, jobject thiz, jobject jPayloadIn
     jmethodID m_get = NULL;
     jmethodID m_keyAt = NULL;
     int cmd_id;
-    uint8_t *payload = NULL;
+    uint8_t *payload_buf = NULL;
     packet_hdr_t *packet = &g_data;
     assert(packet != NULL);
 
     memset(packet, 0, sizeof(packet_hdr_t));
-    packet->q_value = queue_create();
+
     bd_bt_set_magic(packet, 0xab);
     bd_bt_set_err_flag(packet, 0x0);
     bd_bt_set_ack_flag(packet, 0x1);
@@ -65,6 +68,12 @@ static jbyteArray jni_bt_wrap_data(JNIEnv *env, jobject thiz, jobject jPayloadIn
         jmethodID m_size = (*env)->GetMethodID(env, cls_sparseArray, "size", "()I");
         sparse_size = (*env)->CallIntMethod(env, jSparseArray, m_size);
         loge("sparse_size===%d", sparse_size);
+        q_value = queue_create();
+        if (q_value == NULL)
+        {
+            loge("create queue failed.");
+            return NULL;
+        }
     }
     else
     {
@@ -93,25 +102,23 @@ static jbyteArray jni_bt_wrap_data(JNIEnv *env, jobject thiz, jobject jPayloadIn
             value_len = (unsigned int)(*env)->GetArrayLength(env, jobjectArray1);
             payload_len += value_len;//key value byte
             logw("value_len=%u", value_len);
-            bd_bt_set_key_value(packet, key, pArray, value_len);
+            bd_bt_set_key_value(q_value, key, pArray, value_len);
 
-            for (int j = 0; j < value_len; ++j)
-            {
-                loge("valueArray=%d", pArray[j]);
-            }
+//            for (int j = 0; j < value_len; ++j)
+//                loge("valueArray=%d", pArray[j]);
             (*env)->ReleaseByteArrayElements(env, jobjectArray1, (jbyte *) pArray, NULL);
         }
         else
         {
-            bd_bt_set_key_value(packet, key, pArray, value_len);
+            bd_bt_set_key_value(q_value, key, pArray, value_len);
         }
     }
     total_size += payload_len;
 
     if (payload_len > 0)
     {
-        payload = calloc(payload_len, sizeof(uint8_t));
-        if (!payload)
+        payload_buf = calloc(payload_len, sizeof(uint8_t));
+        if (!payload_buf)
         {
             loge("%s calloc failed", __func__);
             return NULL;
@@ -121,26 +128,26 @@ static jbyteArray jni_bt_wrap_data(JNIEnv *env, jobject thiz, jobject jPayloadIn
 
     uint8_t *buf = (uint8_t *) packet;
 
-    if (payload && buf)
+    if (payload_buf && buf)
     {
         if (cmd_id >= 0)
         {
-            memcpy(payload + position, buf+8, 2);//copy L2 header to payload buf
+            memcpy(payload_buf + position, buf+8, 2);//copy L2 header to payload buf
             position += 2;
         }
 
-        int q_size = queue_empty(packet->q_value) ? 0 : queue_elements(packet->q_value);
+        int q_size = queue_empty(q_value) ? 0 : queue_elements(q_value);
         key_value_t *key_value = NULL;
         for (int i = 0; i < q_size; ++i)
         {
-            queue_get(packet->q_value, (void **) &key_value);
+            queue_get(q_value, (void **) &key_value);
             if (key_value != NULL)
             {
                 uint8_t *key_value_buf = (uint8_t *) key_value;
-                memcpy(payload+position, key_value_buf, 1+2);//copy key&key header to the end of L2 header
+                memcpy(payload_buf+position, key_value_buf, 1+2);//copy key&key header to the end of L2 header
                 position+=(1+2);
 
-                memcpy(payload+position, key_value->value, key_value->value_len);//copy value to the end of key&key header
+                memcpy(payload_buf+position, key_value->value, key_value->value_len);//copy value to the end of key&key header
                 position+=key_value->value_len;
             }
             else
@@ -148,11 +155,13 @@ static jbyteArray jni_bt_wrap_data(JNIEnv *env, jobject thiz, jobject jPayloadIn
                 logw("key value is null");
             }
         }
-
-        for (int i = 0; i < payload_len; i++)
-            logw("payload i=%d 0x%02x", i, (payload[i]));
-        memcpy(buf + 8, payload, payload_len);//copy payload to the end of L1 header
-        bd_bt_set_crc16(packet, payload, payload_len);
+        if (q_value)
+            queue_destroy_complete(q_value, destroy_queue_element);
+//        for (int i = 0; i < payload_len; i++)
+//            logw("payload i=%d 0x%02x", i, (payload[i]));
+        memcpy(buf + 8, payload_buf, payload_len);//copy payload to the end of L1 header
+        //logi("queue_empty q size=%d", queue_elements(q_value));
+        bd_bt_set_crc16(packet, payload_buf, payload_len);
         //logw("crc16=%02x", packet->crc16);
     }
 
@@ -162,45 +171,39 @@ static jbyteArray jni_bt_wrap_data(JNIEnv *env, jobject thiz, jobject jPayloadIn
 
     jbyteArray jbyteArray1 = (*env)->NewByteArray(env, total_size);
     (*env)->SetByteArrayRegion(env, jbyteArray1, 0, total_size, (const jbyte *) buf);
-
+    if (payload_buf)
+        free(payload_buf);
     return jbyteArray1;
 }
 
-static jbyteArray jni_bt_wrap(JNIEnv *env, jobject thiz, jint cmdId, jint version, jbyteArray jarray)
+static void destroy_queue_element(void *element)
+{
+    logi("%s:%p",__func__, element);
+    if (element)
+        free(element);
+}
+static jboolean jni_bt_release(JNIEnv *env, jobject thiz)
 {
     logi("%s", __func__);
-    int size = 0;
-    uint8_t *cArray = NULL;
-    int total_size = 8;//L1 header
-    if (cmdId > 0)
+    packet_hdr_t *packet = &g_data;
+    assert(packet != NULL);
+    if (packet)
     {
-        total_size += 2;//L2 packet header
+//        if (q_value&&queue_elements(q_value)>0)
+//            queue_destroy_complete(q_value, destroy_queue_element);
     }
-
-    if (jarray != NULL)
+    else
     {
-        size = (*env)->GetArrayLength(env, jarray);
-        total_size += size;
-        cArray = (uint8_t *) (*env)->GetByteArrayElements(env, jarray, NULL);
-        (*env)->ReleaseByteArrayElements(env, jarray, (jbyte *) cArray, NULL);
+        return JNI_FALSE;
     }
-
-    packet_hdr_t *data = bd_bt_packet_wrap(cmdId, version, size, cArray);
-
-    uint8_t *buf = (uint8_t *) data;
-    loge("total_size=%02x, size=%d", total_size, size);
-    jbyteArray jbyteArray1 = (*env)->NewByteArray(env, total_size);
-    (*env)->SetByteArrayRegion(env, jbyteArray1, 0, total_size, (const jbyte *) buf);
-
-    return jbyteArray1;
+    return JNI_TRUE;
 }
 
 static JNINativeMethod g_methods[] =
 {
         {"nativeInit", "()V", (void*) jni_init},
-        {"nativeWrap", "(II[B)[B", (void*) jni_bt_wrap},
+        {"nativeRelease", "()Z", (void*) jni_bt_release},
         {"nativeWrapData", "(Lcom/demuxer/PayloadInfo;I)[B", (void*) jni_bt_wrap_data},
- //       {"nativeGetCrc16", "(S[BI)C", (void*) jni_getCrc16},
 };
 
 jint JNI_OnLoad(JavaVM *vm, void *reserved)

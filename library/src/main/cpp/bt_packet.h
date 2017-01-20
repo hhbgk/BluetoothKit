@@ -51,13 +51,13 @@ typedef struct packet_hdr{
 #else
 #error  "Please fix <asm/byteorder.h>"
 #endif
-    queue_t *q_value;//L2 payload
+    //queue_t *q_value;//L2 payload
 }packet_hdr_t;
 
 packet_hdr_t * bd_bt_packet_wrap(int, int, int, uint8_t *);
 void bd_bt_set_version(packet_hdr_t *packet, int version);
 packet_hdr_t *bd_bt_create_packet(void);
-void bd_bt_set_key_value(packet_hdr_t *packet, int key, uint8_t *value, size_t size);
+void bd_bt_set_key_value(queue_t *packet, int key, uint8_t *value, size_t size);
 
 void bd_bt_set_magic(packet_hdr_t *packet, int );
 void bd_bt_set_err_flag(packet_hdr_t *packet, int );
