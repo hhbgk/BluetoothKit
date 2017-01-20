@@ -32,9 +32,10 @@ static jbyteArray jni_bt_wrap_data(JNIEnv *env, jobject thiz, jobject jPayloadIn
 {
     logi("%s", __func__);
 
-    int total_size = 8;//L1 header
     uint16_t payload_len = 0x0;
+    int total_size = 8;//L1 header
     int sparse_size = 0;//key value size
+    uint32_t position = 0;
     jmethodID m_get = NULL;
     jmethodID m_keyAt = NULL;
     int cmd_id;
@@ -96,7 +97,7 @@ static jbyteArray jni_bt_wrap_data(JNIEnv *env, jobject thiz, jobject jPayloadIn
 
             for (int j = 0; j < value_len; ++j)
             {
-                loge("valueArray=%d, j=%d", pArray[j], j);
+                loge("valueArray=%d", pArray[j]);
             }
             (*env)->ReleaseByteArrayElements(env, jobjectArray1, (jbyte *) pArray, NULL);
         }
@@ -119,43 +120,46 @@ static jbyteArray jni_bt_wrap_data(JNIEnv *env, jobject thiz, jobject jPayloadIn
     }
 
     uint8_t *buf = (uint8_t *) packet;
-    int q_size = queue_empty(packet->q_value) ? 0 : queue_elements(packet->q_value);
-
-    key_value_t *key_value = NULL;
-    for (int i = 0; i < q_size; ++i) {
-        queue_get(packet->q_value, (void **) &key_value);
-    }
 
     if (payload && buf)
     {
         if (cmd_id >= 0)
-            memcpy(payload, buf+8, 2);
-
-        if (key_value != NULL)
         {
-            uint8_t *key_value_buf = (uint8_t *) key_value;
-            memcpy(payload+2, key_value_buf, 1+2+key_value->value_len);
-            memcpy(buf + 10, key_value_buf, 1+2+key_value->value_len);
-        }
-        else
-        {
-            logw("key value is null");
+            memcpy(payload + position, buf+8, 2);//copy L2 header to payload buf
+            position += 2;
         }
 
-        bd_bt_set_crc16(packet, payload, payload_len);
-        logw("crc16=%02x", packet->crc16);
+        int q_size = queue_empty(packet->q_value) ? 0 : queue_elements(packet->q_value);
+        key_value_t *key_value = NULL;
+        for (int i = 0; i < q_size; ++i)
+        {
+            queue_get(packet->q_value, (void **) &key_value);
+            if (key_value != NULL)
+            {
+                uint8_t *key_value_buf = (uint8_t *) key_value;
+                memcpy(payload+position, key_value_buf, 1+2);//copy key&key header to the end of L2 header
+                position+=(1+2);
+
+                memcpy(payload+position, key_value->value, key_value->value_len);//copy value to the end of key&key header
+                position+=key_value->value_len;
+            }
+            else
+            {
+                logw("key value is null");
+            }
+        }
 
         for (int i = 0; i < payload_len; i++)
-        {
             logw("payload i=%d 0x%02x", i, (payload[i]));
-        }
+        memcpy(buf + 8, payload, payload_len);//copy payload to the end of L1 header
+        bd_bt_set_crc16(packet, payload, payload_len);
+        //logw("crc16=%02x", packet->crc16);
     }
 
     loge("total_size=%02x, payload_len=%d", total_size, payload_len);
     for (int i = 0; i < total_size; i++)
-    {
         logi("i=%d 0x%02x", i, (buf[i]));
-    }
+
     jbyteArray jbyteArray1 = (*env)->NewByteArray(env, total_size);
     (*env)->SetByteArrayRegion(env, jbyteArray1, 0, total_size, (const jbyte *) buf);
 

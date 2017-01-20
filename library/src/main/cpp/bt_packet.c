@@ -67,12 +67,12 @@ void bd_bt_set_key_value(packet_hdr_t *packet, int key, uint8_t *value, size_t s
     {
         key_value_t *key_value = calloc(1, sizeof(key_value_t));
         key_value->key = (uint8_t) (key & 0xFF);
-        key_value->reserve = 0x0;
-        key_value->value_len = (uint16_t) (size & 0x1F);
+        key_value->reserve = 0;//128;//7bit
+        key_value->value_len = (uint16_t) (size & 0x01FF);//9 bit
+        loge("reserve=%02x, value len=%02x, size=%02x", key_value->reserve, key_value->value_len, size);
         if (value && size > 0)
         {
             key_value->value = calloc(size, sizeof(uint8_t));
-
             memcpy(key_value->value, value, size);
         }
         else
