@@ -1,5 +1,7 @@
 package com.demuxer;
 
+import android.util.Log;
+
 public class BtBandManager {
     String tag = getClass().getSimpleName();
     private static BtBandManager instance = null;
@@ -19,17 +21,47 @@ public class BtBandManager {
 
     private BtBandManager(){
         nativeInit();
-       /*
-        PayloadInfo payloadInfo = new PayloadInfo();
+
+       //test wrap data
+/*        PayloadInfo payloadInfo = new PayloadInfo();
         payloadInfo.setCommandId(0x06);
         SparseArray<byte[]> sparseArray = new SparseArray<>();
 //        sparseArray.put(0x06, new byte[]{5,4,3,2,1});
         sparseArray.put(0x10, null);
         payloadInfo.setValue(sparseArray);
         byte[] data = nativeWrapData(payloadInfo, mVersion);
-        for (int i = 0; i < data.length; i++)
-            Log.e(tag, String.format(Locale.US, "%02x", data[i]));
-        */
+*/
+//        for (int i = 0; i < data.length; i++)
+//            Log.e(tag, String.format(Locale.US, "%02x", data[i]));
+
+
+        //testing parse data from receive interface
+        byte[] data = new byte[15];
+        data[0] = (byte) 0xab;
+        data[1] = 0x3F;//reserve, err flag, ack flag, version
+        data[2] = 0x00;//payload length
+        data[3] = 0x07;//payload length
+        data[4] = 0x01;//crc
+        data[5] = (byte) 0xf1;//crc
+        data[6] = 0x00;//sequence id
+        data[7] = 0x1e;//sequence id
+
+        data[8] = 0x01;//cmd id
+        data[9] = 0x00;//version, reserve
+
+        data[10] = 0x02;//key
+        data[11] =0x00;//key header
+        data[12]=0x02;//value length
+        data[13] = 0x0f;
+        data[14] = 0x0a;
+
+/*        data[15] = 0x01;//key
+        data[16] =0x00;//key header
+        data[17]=0x02;//value length
+        data[18] = 0x08;
+        data[19] = 0x09;*/
+        nativeParseData(data, data.length);
+
     }
 
     public byte[] wrapData(PayloadInfo payloadInfo, int version){
@@ -38,6 +70,10 @@ public class BtBandManager {
         }
 
         return nativeWrapData(payloadInfo, version);
+    }
+
+    private void onNativeCallback(int cmd, int key, int state){
+        Log.w(tag, "cmd "+ cmd +", key="+key + ", state="+state);
     }
 
     public byte[] wrapData(PayloadInfo payloadInfo){
@@ -63,4 +99,5 @@ public class BtBandManager {
     private native void nativeInit();
     private native boolean nativeRelease();
     private native byte[] nativeWrapData(PayloadInfo payloadInfo, int version);
+    private native boolean nativeParseData(byte[] receivedData, int size);
 }

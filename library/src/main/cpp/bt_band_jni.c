@@ -8,6 +8,7 @@
 #include <assert.h>
 #include "debug.h"
 #include "bt_packet.h"
+#include "bt_band_jni.h"
 
 #define JNI_CLASS "com/demuxer/BtBandManager"
 #define NELEM(x) ((int) (sizeof(x) / sizeof((x)[0])))
@@ -16,7 +17,10 @@ static JavaVM *gJVM = NULL;
 static jobject gObj = NULL;
 static packet_hdr_t g_data = {0};
 static queue_t *q_value;//for L2 payload of values
+static packet_hdr_t g_rcv_data;
 static void destroy_queue_element(void *element);
+static void parse_key_value(uint8_t , uint8_t *, uint16_t);
+static jmethodID cb_native_callback_id;
 
 static void jni_init(JNIEnv *env, jobject thiz)
 {
@@ -28,8 +32,24 @@ static void jni_init(JNIEnv *env, jobject thiz)
     {
         (*env)->ThrowNew(env, "java/lang/NullPointerException", "Unable to find exception class");
     }
+
+    cb_native_callback_id = (*env)->GetMethodID(env, clazz, "onNativeCallback", "(III)V");
 }
 
+static void on_callback(int cmd, int key, int state)
+{
+    JNIEnv *env = NULL;
+
+    if ((*gJVM)->GetEnv(gJVM, (void *) &env, JNI_VERSION_1_6) == JNI_EDETACHED) {
+        // detached
+        (*env)->CallVoidMethod(env, gObj, cb_native_callback_id, cmd, key, state);
+        (*gJVM)->DetachCurrentThread(gJVM);
+    } else {
+        // attached
+        assert(env != NULL);
+        (*env)->CallVoidMethod(env, gObj, cb_native_callback_id, cmd, key, state);
+    }
+}
 static jbyteArray jni_bt_wrap_data(JNIEnv *env, jobject thiz, jobject jPayloadInfo, jint version)
 {
     uint8_t *pp;
@@ -53,7 +73,7 @@ static jbyteArray jni_bt_wrap_data(JNIEnv *env, jobject thiz, jobject jPayloadIn
     bd_bt_set_ack_flag(packet, 0x1);
     bd_bt_set_version(packet, version);
 
-    bd_bt_set_seq_id(packet, 0x1e00);
+    bd_bt_set_seq_id(packet, 0x001e);
     jclass cls_payloadInfo = (*env)->GetObjectClass(env, jPayloadInfo);
     //method in class PayloadInfo
     jmethodID m_getValue = (*env)->GetMethodID(env, cls_payloadInfo, "getValue", "()Landroid/util/SparseArray;");
@@ -102,7 +122,7 @@ static jbyteArray jni_bt_wrap_data(JNIEnv *env, jobject thiz, jobject jPayloadIn
             value_len = (unsigned int)(*env)->GetArrayLength(env, jobjectArray1);
             payload_len += value_len;//key value byte
             logw("value_len=%u", value_len);
-            bd_bt_set_key_value(q_value, key, pArray, value_len);
+            bd_bt_set_key_value(q_value, packet->cmd_id, key, pArray, value_len);
 
 //            for (int j = 0; j < value_len; ++j)
 //                loge("valueArray=%d", pArray[j]);
@@ -110,7 +130,7 @@ static jbyteArray jni_bt_wrap_data(JNIEnv *env, jobject thiz, jobject jPayloadIn
         }
         else
         {
-            bd_bt_set_key_value(q_value, key, pArray, value_len);
+            bd_bt_set_key_value(q_value, packet->cmd_id, key, pArray, value_len);
         }
     }
     total_size += payload_len;
@@ -161,8 +181,9 @@ static jbyteArray jni_bt_wrap_data(JNIEnv *env, jobject thiz, jobject jPayloadIn
 //            logw("payload i=%d 0x%02x", i, (payload[i]));
         memcpy(buf + 8, payload_buf, payload_len);//copy payload to the end of L1 header
         //logi("queue_empty q size=%d", queue_elements(q_value));
-        bd_bt_set_crc16(packet, payload_buf, payload_len);
-        //logw("crc16=%02x", packet->crc16);
+        uint16_t crc = bd_crc16(0, payload_buf, payload_len);
+        bd_bt_set_crc16(packet, crc);
+        //logw("crc16=%02x", crc);
     }
 
     loge("total_size=%02x, payload_len=%d", total_size, payload_len);
@@ -199,11 +220,143 @@ static jboolean jni_bt_release(JNIEnv *env, jobject thiz)
     return JNI_TRUE;
 }
 
+static jboolean jni_bt_parse_data(JNIEnv *env, jobject thiz, jbyteArray jbyteArray1, jint size)
+{
+    uint8_t *data = NULL;
+    packet_hdr_t *rcv_data = NULL;
+    if (jbyteArray1 == NULL || size <= 0)
+    {
+        loge("Data maybe is null");
+        return JNI_FALSE;
+    }
+    data = (uint8_t *) (*env)->GetByteArrayElements(env, jbyteArray1, NULL);
+    (*env)->ReleaseByteArrayElements(env, jbyteArray1, (jbyte *) data, NULL);
+    if (data[0] != 0xAB)
+    {
+        loge("The data maybe from hack...");
+        return JNI_FALSE;
+    }
+    rcv_data = (packet_hdr_t *) data;
+    for (int i = 0; i < size; i++) {
+        logi("rcv data i=%d %02x", i, data[i]);
+    }
+    bd_bt_set_payload_length(rcv_data, rcv_data->payload_len);
+    bd_bt_set_crc16(rcv_data, rcv_data->crc16);
+    bd_bt_set_seq_id(rcv_data, rcv_data->seq_id);
+    //bd_bt_set_cmdId_version(rcv_data, rcv_data->cmd_id, rcv_data->payload_version);
+    loge("len =0x%04x", rcv_data->payload_len);
+
+    //loge("===%02x, %02x, %02x, %02x", rcv_data->reserve, rcv_data->err_flag, rcv_data->ack_flag, rcv_data->version);
+    if (rcv_data->payload_len > 0)
+    {
+        logi("cmd id=0x%02x", rcv_data->cmd_id);
+        uint8_t *key_value_buf = &data[10];
+        parse_key_value(rcv_data->cmd_id, key_value_buf, (uint16_t) (rcv_data->payload_len - 2));
+    }
+    else
+    {
+        logw("No payload!");
+    }
+    return JNI_TRUE;
+}
+static void parse_key_value(uint8_t cmd, uint8_t *buf, uint16_t buf_size)
+{
+    loge("buf size= 0x%02x",buf_size);
+    uint8_t key=0;
+    uint16_t value_len;
+    queue_t *queue;
+    queue = queue_create();
+    if (!queue)
+    {
+        loge("Create queue faile.");
+        return;
+    }
+    uint32_t position = 0;
+    while (position < buf_size)
+    {
+        key = buf[position];
+        value_len = (uint16_t) ((buf[position+1] & 0x01)<<8)|buf[position+2];
+        position +=(1+2);
+
+        key_value_t *key_value = calloc(1, sizeof(key_value_t));
+        key_value->key = key;
+        key_value->reserve = 0;//128;//7bit
+        key_value->value_len = value_len;//9 bit
+        loge("key=%02x, value len=%02x", key_value->key, key_value->value_len);
+        if (value_len > 0)
+        {
+            key_value->value = calloc(value_len, sizeof(uint8_t));
+            memcpy(key_value->value, buf+position, value_len);
+            position+=value_len;
+        }
+        else
+        {
+            logw("No value ");
+        }
+        queue_put(queue, key_value);
+    }
+    logi("key=0x%02x", key);
+    switch (cmd)
+    {
+        case CMD_FW_UPGRADE:
+            switch (key)
+            {
+                case KEY_FW_UPGRADE_REQUEST:
+                    break;
+                case KEY_FW_UPGRADE_RESPONSE:
+                    logi("fw upgrade response");
+                    key_value_t *keyValue=NULL;
+                    queue_get(queue, (void **) &keyValue);
+                    if (keyValue)
+                    {
+                        logw("%02x, %02x, %02x,%02x", keyValue->key, keyValue->value_len, keyValue->value[0], keyValue->value[1]);
+                        if (keyValue->value_len > 0)
+                        {
+                            on_callback(cmd, key, 2);
+                            if (keyValue->value[0] == 0x00)
+                            {
+                                //success
+                            }
+                            else if (keyValue->value[0] == 0x01)
+                            {
+                                //failed
+                                if (keyValue->value[1] == 0x01)
+                                {
+                                    //Power is too low
+                                }
+                            }
+                        }
+                    }
+
+                    break;
+                default:
+                    break;
+            }
+            break;
+        case CMD_SETTINGS:
+
+            break;
+        case CMD_BINDING:
+        case CMD_ALERT:
+        case CMD_SPORT:
+        case CMD_FACTORY_TEST:
+        case CMD_CONTROL:
+        case CMD_DUMP_STACK:
+        case CMD_READ_FLASH:
+            break;
+        default:
+            loge("Unknown cmd 0x%02x", cmd);
+            break;
+    }
+    if (queue)
+        queue_destroy_complete(queue, destroy_queue_element);
+}
 static JNINativeMethod g_methods[] =
 {
         {"nativeInit", "()V", (void*) jni_init},
         {"nativeRelease", "()Z", (void*) jni_bt_release},
         {"nativeWrapData", "(Lcom/demuxer/PayloadInfo;I)[B", (void*) jni_bt_wrap_data},
+        {"nativeParseData", "([BI)Z", (void *)jni_bt_parse_data},
 };
 
 jint JNI_OnLoad(JavaVM *vm, void *reserved)

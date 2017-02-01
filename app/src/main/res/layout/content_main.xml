@@ -28,4 +28,11 @@
         custom:has_footer="false"
         custom:has_shadow="false"
         custom:has_divider="true"/>
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/app_name"
+        android:textColor="@android:color/holo_green_light"
+        android:textSize="28sp"
+        android:layout_centerInParent="true"/>
 </RelativeLayout>

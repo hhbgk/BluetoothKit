@@ -1,13 +1,10 @@
-//
-// Created by huanghaibo on 2017/1/16.
-//
-
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
 #include "bt_packet.h"
 #include "debug.h"
+#include "bt_band_jni.h"
 static uint16_t const crc16_table[256] =
         {
                 0x0000, 0xC0C1, 0xC181, 0x0140, 0xC301, 0x03C0, 0x0280, 0xC241,
@@ -60,7 +57,23 @@ void bd_bt_set_payload_length(packet_hdr_t *packet, uint16_t payload_len)
     assert(packet != NULL);
     packet->payload_len = (payload_len >> 8 )|(payload_len<<8);
 }
-void bd_bt_set_key_value(queue_t *q_value, int key, uint8_t *value, size_t size)
+static void key_dispatch(key_value_t *key_value, uint8_t cmd, uint8_t *value_buf, size_t size)
+{
+    switch (cmd)
+    {
+        case CMD_FW_UPGRADE:
+            break;
+        case CMD_SETTINGS:
+            break;
+        case CMD_BINDING:
+            break;
+        case CMD_ALERT:
+            break;
+    }
+    key_value->value = calloc(size, sizeof(uint8_t));
+    memcpy(key_value->value, value_buf, size);
+}
+void bd_bt_set_key_value(queue_t *q_value, uint8_t cmd, int key, uint8_t *value, size_t size)
 {
     assert(q_value != NULL);
     if (key > 0)
@@ -72,8 +85,7 @@ void bd_bt_set_key_value(queue_t *q_value, int key, uint8_t *value, size_t size)
         loge("reserve=%02x, value len=%02x, size=%02x", key_value->reserve, key_value->value_len, size);
         if (value && size > 0)
         {
-            key_value->value = calloc(size, sizeof(uint8_t));
-            memcpy(key_value->value, value, size);
+            key_dispatch(key_value, cmd, value,size);
         }
         else
         {
@@ -125,76 +137,23 @@ uint16_t bd_crc16(uint16_t crc, uint8_t const *buffer, uint16_t len)
     return crc;
 }
 //CRC只计算L1的payload, 即L2数据
-void bd_bt_set_crc16(packet_hdr_t *packet, uint8_t *buf, int size)
+void bd_bt_set_crc16(packet_hdr_t *packet, uint16_t crc)
 {
-    uint16_t crc = bd_crc16(0, buf, 0x05);
+    //uint16_t crc = bd_crc16(0, buf, 0x05);
     packet->crc16 = (crc >> 8 )| ( crc<<8 );
 }
-void bd_bt_set_seq_id(packet_hdr_t *packet, int seqId)
+void bd_bt_set_seq_id(packet_hdr_t *packet, uint16_t seqId)
 {
-    uint16_t seq_id = (uint16_t) (seqId & 0xFFFF);
-    packet->seq_id = (seq_id);
+    packet->seq_id = (seqId >> 8) | (seqId << 8);
 }
 void bd_bt_set_cmdId_version(packet_hdr_t *packet, int cmdId, int version)
 {
     packet->cmd_id = (uint8_t) (cmdId & 0xFF);
     packet->payload_version = (uint8_t) (version & 0xF0);
 }
-packet_hdr_t *bd_bt_packet_wrap(int cmdId, int version, int size, uint8_t *payload)
+
+//-----------------------------------------------------------------------------------
+void bd_bt_get_payload_length(packet_hdr_t packetHdr, uint8_t *pBuf)
 {
-    packet_hdr_t *packet = malloc(sizeof(packet_hdr_t));
-    if (!packet)
-    {
-        loge("%s malloc failed", __func__);
-        return NULL;
-    }
-//    data[0] = 0xab;//magic
-//    data[1] = 0x00;//reserve errorFlag ackFlag version
-//    data[2] = 0x00;//payload length
-//    data[3] = 0x05;//payload length
 
-//    data[4] = 0xc5;//crc16[0];
-//    data[5] = 0x89;//crc16[1];
-
-//    data[6] = 0x00;//seq id
-//    data[7] = 0x1e;//seq id
-/*    packet->data_len = ((0x05 << 8) | 0x00);
-    uint16_t data_len = (uint16_t) (((packet->data_len & 0xFF00) >> 8) | ((packet->data_len & 0x00FF) << 8));
-    logi("==========data len=0x%04X, data_len=%d", packet->data_len, data_len);
-    packet->crc16 = ((0x89<<8)| (0xc5 & 0xFF));
-    packet->seq_id = ((0x1e<<8) | 0x0);
-
-    int i= 0;
-    uint8_t *buf = (uint8_t *) packet;
-
-
-    //if (data_len >= 2)
-    if (cmdId > 0)
-    {
-        packet->cmd_id = (uint8_t) (cmdId & 0x00FF);//0x06;//cmd id
-        loge("cmd id=%02x", packet->cmd_id);
-        packet->data_hdr_version = 0x00;//version 4bits
-        packet->data_hdr_reserve = 0x00;//reserve 4bits
-
-
-        if ((size > 2) && !payload)
-        {
-            packet->key_value = malloc(size);
-            if (!packet->key_value)
-            {
-                free(packet);
-                loge("%s malloc failed", __func__);
-                return NULL;
-            }
-
-            packet->key = 0x10;//key
-            packet->key_hdr_reserve= 0x0;//key header,7bit
-            packet->key_hdr_value_len = 0x00;//key header 9bit, key value length
-            for (i = 0; i < 13; i++)
-            {
-                logi("i=%d 0x%02x", i, (buf[i]));
-            }
-        }
-    }*/
-    return packet;
 }
