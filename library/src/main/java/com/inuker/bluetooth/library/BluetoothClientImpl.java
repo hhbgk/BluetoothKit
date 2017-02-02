@@ -1,11 +1,8 @@
 package com.inuker.bluetooth.library;
 
-import android.bluetooth.BluetoothAdapter;
-import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.os.Bundle;
 import android.os.Handler;
@@ -15,7 +12,9 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.os.Message;
 import android.os.RemoteException;
+import android.util.Log;
 
+import com.demuxer.BtBandManager;
 import com.inuker.bluetooth.library.connect.listener.BleConnectStatusListener;
 import com.inuker.bluetooth.library.connect.listener.BluetoothStateListener;
 import com.inuker.bluetooth.library.connect.options.BleConnectOptions;
@@ -49,8 +48,6 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 
-import static com.inuker.bluetooth.library.Constants.ACTION_CHARACTER_CHANGED;
-import static com.inuker.bluetooth.library.Constants.ACTION_CONNECT_STATUS_CHANGED;
 import static com.inuker.bluetooth.library.Constants.CODE_CLEAR_REQUEST;
 import static com.inuker.bluetooth.library.Constants.CODE_CONNECT;
 import static com.inuker.bluetooth.library.Constants.CODE_DISCONNECT;
@@ -76,20 +73,18 @@ import static com.inuker.bluetooth.library.Constants.EXTRA_REQUEST;
 import static com.inuker.bluetooth.library.Constants.EXTRA_RSSI;
 import static com.inuker.bluetooth.library.Constants.EXTRA_SEARCH_RESULT;
 import static com.inuker.bluetooth.library.Constants.EXTRA_SERVICE_UUID;
-import static com.inuker.bluetooth.library.Constants.EXTRA_STATUS;
 import static com.inuker.bluetooth.library.Constants.EXTRA_TYPE;
 import static com.inuker.bluetooth.library.Constants.REQUEST_SUCCESS;
 import static com.inuker.bluetooth.library.Constants.SEARCH_CANCEL;
 import static com.inuker.bluetooth.library.Constants.SEARCH_START;
 import static com.inuker.bluetooth.library.Constants.SEARCH_STOP;
 import static com.inuker.bluetooth.library.Constants.SERVICE_UNREADY;
-import static com.inuker.bluetooth.library.Constants.STATUS_DISCONNECTED;
 
 /**
  * Created by dingjikerbo on 16/4/8.
  */
 public class BluetoothClientImpl implements IBluetoothClient, ProxyInterceptor, Callback {
-
+    private String tag = getClass().getSimpleName();
     private static final int MSG_INVOKE_PROXY = 1;
 
     private static final String TAG = BluetoothClientImpl.class.getSimpleName();
@@ -530,6 +525,7 @@ public class BluetoothClientImpl implements IBluetoothClient, ProxyInterceptor, 
     }
 
     private void dispatchCharacterNotify(String mac, UUID service, UUID character, byte[] value) {
+        Log.w(tag, "dispatchCharacterNotify mac="+mac + ", service="+service +", character="+character);
         HashMap<String, List<BleNotifyResponse>> notifyMap = mNotifyResponses.get(mac);
         if (notifyMap != null) {
             String key = generateCharacterKey(service, character);
@@ -537,12 +533,14 @@ public class BluetoothClientImpl implements IBluetoothClient, ProxyInterceptor, 
             if (responses != null) {
                 for (final BleNotifyResponse response : responses) {
                     response.onNotify(service, character, value);
+                    BtBandManager.getInstance().parseData(value);
                 }
             }
         }
     }
 
     private void dispatchConnectionStatus(final String mac, final int status) {
+        Log.w(tag, "dispatchConnectionStatus mac="+mac+", status="+status);
         List<BleConnectStatusListener> listeners = mConnectStatusListeners.get(mac);
         if (!ListUtils.isEmpty(listeners)) {
             for (final BleConnectStatusListener listener : listeners) {
@@ -558,6 +556,7 @@ public class BluetoothClientImpl implements IBluetoothClient, ProxyInterceptor, 
     }
 
     private void dispatchBluetoothStateChanged(int previousState, final int currentState) {
+        Log.w(tag, "dispatchBluetoothStateChanged currentState>>" + currentState);
         if (currentState == Constants.STATE_OFF || currentState == Constants.STATE_ON) {
             for (final BluetoothStateListener listener : mBluetoothStateListener) {
                 BluetoothUtils.post(new Runnable() {

@@ -142,9 +142,11 @@ void bd_bt_set_crc16(packet_hdr_t *packet, uint16_t crc)
     //uint16_t crc = bd_crc16(0, buf, 0x05);
     packet->crc16 = (crc >> 8 )| ( crc<<8 );
 }
-void bd_bt_set_seq_id(packet_hdr_t *packet, uint16_t seqId)
+void bd_bt_set_seq_id(packet_hdr_t *packet)
 {
-    packet->seq_id = (seqId >> 8) | (seqId << 8);
+    static uint16_t seq_id = 0;
+    loge("i=========%d", (seq_id++));
+    packet->seq_id = (seq_id >> 8) | (seq_id << 8);
 }
 void bd_bt_set_cmdId_version(packet_hdr_t *packet, int cmdId, int version)
 {

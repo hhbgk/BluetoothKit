@@ -10,6 +10,8 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 
+import com.bdbt.utils.Commands;
+import com.bdbt.utils.Keys;
 import com.demuxer.BtBandManager;
 import com.demuxer.PayloadInfo;
 import com.inuker.bluetooth.library.connect.listener.BleConnectStatusListener;
@@ -20,6 +22,7 @@ import com.inuker.bluetooth.library.connect.response.BleWriteResponse;
 import com.inuker.bluetooth.library.utils.BluetoothLog;
 import com.inuker.bluetooth.library.utils.ByteUtils;
 
+import java.util.Locale;
 import java.util.UUID;
 
 import static com.inuker.bluetooth.library.Constants.REQUEST_SUCCESS;
@@ -144,54 +147,26 @@ public class CharacterActivity extends Activity implements View.OnClickListener 
                 break;
             case R.id.write:
                 byte[] data;
-                if (isWriteSuccess){
+                /*if (isWriteSuccess){
                     PayloadInfo payloadInfo = new PayloadInfo();
-                    payloadInfo.setCommandId(0x06);
+                    payloadInfo.setCommandId(Commands.CMD_BINDING);
                     SparseArray<byte[]> sparseArray = new SparseArray<>();
                     sparseArray.put(0x06, null);
                     payloadInfo.setValue(sparseArray);
                     data = BtBandManager.getInstance().wrapData(payloadInfo);
-                 /*   data = new byte[13];
-                    data[0] = (byte) 0xab;//magic
-                    data[1] = 0x00;//reserve errorFlag ackFlag version
-                    data[2] = 0x00;//payload length
-                    data[3] = 0x05;//payload length
-                    data[6] = 0x01;//seq id
-                    data[7] = 0x3c;//seq id
-                    data[4] = 0x01;//crc16[0];//
-                    data[5] = 0x68;//crc16[1];
 
-                    data[8] = 0x06;//cmd id
-                    data[9] = 0x00;//version 4bits & reserve 4bits
-                    data[10] = 0x06;//key
-                    data[11] = 0x00;//key header
-                    data[12] = 0x00;//key header*/
-                } else {
-
-//                    data= new byte[2];
+                } else */
+                {
                     PayloadInfo payloadInfo = new PayloadInfo();
-                    payloadInfo.setCommandId(0x06);
+                    payloadInfo.setCommandId(Commands.CMD_BINDING);
                     SparseArray<byte[]> sparseArray = new SparseArray<>();
-                    sparseArray.put(0x10, null);
+                    sparseArray.put(Keys.KEY_REQUEST_BINDING_USER, new byte[]{
+//                            0x1,0x2,0x3,0x4,0x5,0x6,0x7,0x8,
+//                            0x1,0x2,0x3,0x4,0x5,0x6,0x7,0x8,
+//                            0x1,0x2,0x3,0x4,0x5,0x6,0x7,0x8,
+                            0x1,0x2,0x3,0x4,0x5,0x6,0x7,0x8});
                     payloadInfo.setValue(sparseArray);
                     data = BtBandManager.getInstance().wrapData(payloadInfo);
-                    /*
-                    data = new byte[13];
-                    data[0] = (byte) 0xab;//magic
-                    data[1] = 0x00;//reserve errorFlag ackFlag version
-                    data[2] = 0x00;//payload length
-                    data[3] = 0x05;//payload length
-                    data[4] = (byte) 0xc5;//crc16[0];//
-                    data[5] = (byte) 0x89;//crc16[1];
-                    data[6] = 0x00;//seq id
-                    data[7] = 0x1e;//seq id
-
-                    data[8] = 0x06;//cmd id
-                    data[9] = 0x00;//version 4bits & reserve 4bits
-                    data[10] = 0x10;//key
-                    data[11] = 0x00;//key header
-                    data[12] = 0x00;//key header
-                    */
                 }
 
 
@@ -211,7 +186,7 @@ public class CharacterActivity extends Activity implements View.OnClickListener 
     private final BleConnectStatusListener mConnectStatusListener = new BleConnectStatusListener() {
         @Override
         public void onConnectStatusChanged(String mac, int status) {
-            BluetoothLog.v(String.format("CharacterActivity.onConnectStatusChanged status = %d", status));
+            BluetoothLog.v(String.format(Locale.US,"CharacterActivity.onConnectStatusChanged status = %d", status));
 
             if (status == STATUS_DISCONNECTED) {
                 CommonUtils.toast("disconnected");

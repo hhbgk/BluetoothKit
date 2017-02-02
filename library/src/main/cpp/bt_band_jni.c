@@ -1,7 +1,3 @@
-//
-// Created by bob on 17-1-16.
-//
-
 #include <stdlib.h>
 #include <android/log.h>
 #include <jni.h>
@@ -18,9 +14,10 @@ static jobject gObj = NULL;
 static packet_hdr_t g_data = {0};
 static queue_t *q_value;//for L2 payload of values
 static packet_hdr_t g_rcv_data;
+static jmethodID cb_native_callback_id;
+
 static void destroy_queue_element(void *element);
 static void parse_key_value(uint8_t , uint8_t *, uint16_t);
-static jmethodID cb_native_callback_id;
 
 static void jni_init(JNIEnv *env, jobject thiz)
 {
@@ -52,9 +49,7 @@ static void on_callback(int cmd, int key, int state)
 }
 static jbyteArray jni_bt_wrap_data(JNIEnv *env, jobject thiz, jobject jPayloadInfo, jint version)
 {
-    uint8_t *pp;
-    logi("%s: %d,%d, %d", __func__, sizeof(struct packet_hdr), sizeof(pp), sizeof(uint8_t*));
-
+    logi("%s", __func__);
     uint16_t payload_len = 0x0;
     int total_size = 8;//L1 header
     int sparse_size = 0;//key value size
@@ -70,10 +65,10 @@ static jbyteArray jni_bt_wrap_data(JNIEnv *env, jobject thiz, jobject jPayloadIn
 
     bd_bt_set_magic(packet, 0xab);
     bd_bt_set_err_flag(packet, 0x0);
-    bd_bt_set_ack_flag(packet, 0x1);
+    bd_bt_set_ack_flag(packet, 0x0);
     bd_bt_set_version(packet, version);
+    bd_bt_set_seq_id(packet);
 
-    bd_bt_set_seq_id(packet, 0x001e);
     jclass cls_payloadInfo = (*env)->GetObjectClass(env, jPayloadInfo);
     //method in class PayloadInfo
     jmethodID m_getValue = (*env)->GetMethodID(env, cls_payloadInfo, "getValue", "()Landroid/util/SparseArray;");
@@ -268,7 +263,7 @@ static void parse_key_value(uint8_t cmd, uint8_t *buf, uint16_t buf_size)
     queue = queue_create();
     if (!queue)
     {
-        loge("Create queue faile.");
+        loge("Create queue fail.");
         return;
     }
     uint32_t position = 0;

@@ -35,9 +35,9 @@ public class BluetoothGattResponse extends BluetoothGattCallback {
     public static final UUID RX_CHAR_UUID = UUID.fromString("6e400003-b5a3-f393-e0a9-e50e24dcca9e");
     @Override
     public void onServicesDiscovered(BluetoothGatt gatt, int status) {
-        if (status == BluetoothGatt.GATT_SUCCESS) {
+        /*if (status == BluetoothGatt.GATT_SUCCESS) {
             readspcial(gatt, status, RX_SERVICE_UUID, RX_CHAR_UUID);
-        }
+        }*/
         response.onServicesDiscovered(status);
     }
     /**

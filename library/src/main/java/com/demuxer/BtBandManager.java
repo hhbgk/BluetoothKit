@@ -36,7 +36,7 @@ public class BtBandManager {
 
 
         //testing parse data from receive interface
-        byte[] data = new byte[15];
+  /*      byte[] data = new byte[15];
         data[0] = (byte) 0xab;
         data[1] = 0x3F;//reserve, err flag, ack flag, version
         data[2] = 0x00;//payload length
@@ -55,13 +55,8 @@ public class BtBandManager {
         data[13] = 0x0f;
         data[14] = 0x0a;
 
-/*        data[15] = 0x01;//key
-        data[16] =0x00;//key header
-        data[17]=0x02;//value length
-        data[18] = 0x08;
-        data[19] = 0x09;*/
         nativeParseData(data, data.length);
-
+*/
     }
 
     public byte[] wrapData(PayloadInfo payloadInfo, int version){
@@ -70,6 +65,13 @@ public class BtBandManager {
         }
 
         return nativeWrapData(payloadInfo, version);
+    }
+
+    public boolean parseData(byte[] receivedData){
+        if (receivedData == null){
+            throw new NullPointerException("Received data can not be null");
+        }
+        return nativeParseData(receivedData, receivedData.length);
     }
 
     private void onNativeCallback(int cmd, int key, int state){

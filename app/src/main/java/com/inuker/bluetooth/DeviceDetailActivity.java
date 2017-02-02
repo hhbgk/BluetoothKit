@@ -79,7 +79,7 @@ public class DeviceDetailActivity extends Activity {
     private final BleConnectStatusListener mConnectStatusListener = new BleConnectStatusListener() {
         @Override
         public void onConnectStatusChanged(String mac, int status) {
-            BluetoothLog.v(String.format("DeviceDetailActivity onConnectStatusChanged %d in %s",
+            BluetoothLog.v(String.format(Locale.US,"DeviceDetailActivity onConnectStatusChanged %d in %s",
                     status, Thread.currentThread().getName()));
 
             mConnected = (status == STATUS_CONNECTED);

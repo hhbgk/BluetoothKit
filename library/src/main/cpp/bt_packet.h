@@ -360,7 +360,7 @@ void bd_bt_set_key_value(queue_t *packet, uint8_t, int key, uint8_t *value, size
 void bd_bt_set_magic(packet_hdr_t *packet, int );
 void bd_bt_set_err_flag(packet_hdr_t *packet, int );
 void bd_bt_set_ack_flag(packet_hdr_t *packet, int );
-void bd_bt_set_seq_id(packet_hdr_t *packet, uint16_t );
+void bd_bt_set_seq_id(packet_hdr_t *packet);
 void bd_bt_set_cmdId_version(packet_hdr_t *packet, int cmdId, int version);
 void bd_bt_set_payload_length(packet_hdr_t *packet, uint16_t payload_len);
 void bd_bt_set_crc16(packet_hdr_t *packet, uint16_t crc);

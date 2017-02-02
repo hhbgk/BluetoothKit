@@ -11,7 +11,7 @@ import java.io.Writer;
  */
 public class BluetoothLog {
 
-    private static final String LOG_TAG = "miio-bluetooth";
+    private static final String LOG_TAG = "bluetooth";
 
     public static void i(String msg) {
         Log.i(LOG_TAG, msg);
