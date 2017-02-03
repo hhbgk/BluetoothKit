@@ -5,6 +5,9 @@
 #include "bt_packet.h"
 #include "debug.h"
 #include "bt_band_jni.h"
+
+static uint16_t seq_id;
+
 static uint16_t const crc16_table[256] =
         {
                 0x0000, 0xC0C1, 0xC181, 0x0140, 0xC301, 0x03C0, 0x0280, 0xC241,
@@ -142,11 +145,15 @@ void bd_bt_set_crc16(packet_hdr_t *packet, uint16_t crc)
     //uint16_t crc = bd_crc16(0, buf, 0x05);
     packet->crc16 = (crc >> 8 )| ( crc<<8 );
 }
-void bd_bt_set_seq_id(packet_hdr_t *packet)
+void bd_bt_update_seq_id(packet_hdr_t *packet)
 {
-    static uint16_t seq_id = 0;
-    loge("i=========%d", (seq_id++));
+    loge("i=========%d", seq_id);
     packet->seq_id = (seq_id >> 8) | (seq_id << 8);
+    seq_id++;
+}
+void bd_bt_set_seq_id(packet_hdr_t *packet, uint16_t seqId)
+{
+    packet->seq_id = (seqId >> 8) | (seqId << 8);
 }
 void bd_bt_set_cmdId_version(packet_hdr_t *packet, int cmdId, int version)
 {
@@ -155,7 +162,18 @@ void bd_bt_set_cmdId_version(packet_hdr_t *packet, int cmdId, int version)
 }
 
 //-----------------------------------------------------------------------------------
-void bd_bt_get_payload_length(packet_hdr_t packetHdr, uint8_t *pBuf)
+uint16_t bd_bt_get_seq_id(packet_hdr_t *packetHdr)
 {
+    return packetHdr->seq_id;
+}
 
+int check_crc16(packet_hdr_t *packetHdr, uint8_t *data, uint16_t length)
+{
+    int crc;
+    crc = bd_crc16(0, data, length);
+    if(crc != packetHdr->crc16)
+    {
+        return 0;
+    }
+    return 1;
 }

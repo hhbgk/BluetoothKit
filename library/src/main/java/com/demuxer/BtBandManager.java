@@ -2,6 +2,8 @@ package com.demuxer;
 
 import android.util.Log;
 
+import com.inuker.bluetooth.library.connect.response.BleAckResponse;
+
 public class BtBandManager {
     String tag = getClass().getSimpleName();
     private static BtBandManager instance = null;
@@ -67,15 +69,28 @@ public class BtBandManager {
         return nativeWrapData(payloadInfo, version);
     }
 
-    public boolean parseData(byte[] receivedData){
+    private BleAckResponse mBleAckResponse;
+
+    public boolean parseData(byte[] receivedData, BleAckResponse bleAckResponse){
         if (receivedData == null){
             throw new NullPointerException("Received data can not be null");
         }
+        mBleAckResponse = bleAckResponse;
         return nativeParseData(receivedData, receivedData.length);
     }
 
     private void onNativeCallback(int cmd, int key, int state){
         Log.w(tag, "cmd "+ cmd +", key="+key + ", state="+state);
+    }
+
+    private void onAckResponse(boolean isError){
+        Log.i(tag, "onAckResponse:"+isError);
+        if (mBleAckResponse != null){
+            if (isError)
+                mBleAckResponse.onError("Maybe magic byte or CRC incorrect!");
+            else
+                mBleAckResponse.onSuccess();
+        }
     }
 
     public byte[] wrapData(PayloadInfo payloadInfo){

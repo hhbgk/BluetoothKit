@@ -17,6 +17,7 @@ import com.inuker.bluetooth.library.model.BleGattProfile;
 import com.inuker.bluetooth.library.utils.BluetoothLog;
 import com.inuker.bluetooth.library.utils.BluetoothUtils;
 
+import java.util.Locale;
 import java.util.UUID;
 
 public abstract class BleRequest implements IBleConnectWorker, IBleRequest, Handler.Callback, GattResponseListener, RuntimeChecker {
@@ -170,7 +171,7 @@ public abstract class BleRequest implements IBleConnectWorker, IBleRequest, Hand
     }
 
     protected void onRequestCompleted(int code) {
-        log(String.format("request complete: code = %d", code));
+        log(String.format(Locale.US,"request complete: code = %d", code));
 
         mHandler.removeCallbacksAndMessages(null);
         clearGattResponseListener(this);
@@ -182,7 +183,7 @@ public abstract class BleRequest implements IBleConnectWorker, IBleRequest, Hand
 
     @Override
     public void closeGatt() {
-        log(String.format("close gatt"));
+        log("close gatt");
         mWorker.closeGatt();
     }
 
@@ -259,7 +260,7 @@ public abstract class BleRequest implements IBleConnectWorker, IBleRequest, Hand
     public void cancel() {
         checkRuntime();
 
-        log(String.format("request canceled"));
+        log("request canceled");
 
         mHandler.removeCallbacksAndMessages(null);
         clearGattResponseListener(this);

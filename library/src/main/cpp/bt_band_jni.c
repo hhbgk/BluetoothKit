@@ -13,11 +13,23 @@ static JavaVM *gJVM = NULL;
 static jobject gObj = NULL;
 static packet_hdr_t g_data = {0};
 static queue_t *q_value;//for L2 payload of values
-static packet_hdr_t g_rcv_data;
+static packet_hdr_t gRcv_data_hdr;
 static jmethodID cb_native_callback_id;
+static jmethodID cb_id_ack_response;
 
 static void destroy_queue_element(void *element);
 static void parse_key_value(uint8_t , uint8_t *, uint16_t);
+
+//static size_t curr_len;
+//static uint8_t packet_buf[512];
+typedef struct {
+    uint8_t start;
+    uint8_t end;
+    size_t curr_pos;
+    size_t payload_len;
+    uint8_t buf[512];
+}app_t;
+static app_t gApp;
 
 static void jni_init(JNIEnv *env, jobject thiz)
 {
@@ -30,7 +42,11 @@ static void jni_init(JNIEnv *env, jobject thiz)
         (*env)->ThrowNew(env, "java/lang/NullPointerException", "Unable to find exception class");
     }
 
+    app_t *pApp = &gApp;
+    memset(pApp, 0, sizeof(app_t));
+
     cb_native_callback_id = (*env)->GetMethodID(env, clazz, "onNativeCallback", "(III)V");
+    cb_id_ack_response = (*env)->GetMethodID(env, clazz, "onAckResponse", "(Z)V");
 }
 
 static void on_callback(int cmd, int key, int state)
@@ -45,6 +61,21 @@ static void on_callback(int cmd, int key, int state)
         // attached
         assert(env != NULL);
         (*env)->CallVoidMethod(env, gObj, cb_native_callback_id, cmd, key, state);
+    }
+}
+
+static void on_ack_response(jboolean isError)
+{
+    JNIEnv *env = NULL;
+
+    if ((*gJVM)->GetEnv(gJVM, (void *) &env, JNI_VERSION_1_6) == JNI_EDETACHED) {
+        // detached
+        (*env)->CallVoidMethod(env, gObj, cb_id_ack_response, isError);
+        (*gJVM)->DetachCurrentThread(gJVM);
+    } else {
+        // attached
+        assert(env != NULL);
+        (*env)->CallVoidMethod(env, gObj, cb_id_ack_response, isError);
     }
 }
 static jbyteArray jni_bt_wrap_data(JNIEnv *env, jobject thiz, jobject jPayloadInfo, jint version)
@@ -67,7 +98,7 @@ static jbyteArray jni_bt_wrap_data(JNIEnv *env, jobject thiz, jobject jPayloadIn
     bd_bt_set_err_flag(packet, 0x0);
     bd_bt_set_ack_flag(packet, 0x0);
     bd_bt_set_version(packet, version);
-    bd_bt_set_seq_id(packet);
+    bd_bt_update_seq_id(packet);
 
     jclass cls_payloadInfo = (*env)->GetObjectClass(env, jPayloadInfo);
     //method in class PayloadInfo
@@ -218,6 +249,7 @@ static jboolean jni_bt_release(JNIEnv *env, jobject thiz)
 static jboolean jni_bt_parse_data(JNIEnv *env, jobject thiz, jbyteArray jbyteArray1, jint size)
 {
     uint8_t *data = NULL;
+    app_t *pApp = &gApp;
     packet_hdr_t *rcv_data = NULL;
     if (jbyteArray1 == NULL || size <= 0)
     {
@@ -226,32 +258,72 @@ static jboolean jni_bt_parse_data(JNIEnv *env, jobject thiz, jbyteArray jbyteArr
     }
     data = (uint8_t *) (*env)->GetByteArrayElements(env, jbyteArray1, NULL);
     (*env)->ReleaseByteArrayElements(env, jbyteArray1, (jbyte *) data, NULL);
-    if (data[0] != 0xAB)
+    if (!pApp->start)
     {
-        loge("The data maybe from hack...");
-        return JNI_FALSE;
+        if (data[0] != 0xAB)
+        {
+            loge("The data maybe from hack...");
+            return JNI_FALSE;
+        }
+        rcv_data = (packet_hdr_t *) data;
+        for (int i = 0; i < size; i++) {
+            logi("rcv data i=%d %02x", i, data[i]);
+        }
+        bd_bt_set_err_flag(rcv_data, rcv_data->err_flag);
+        bd_bt_set_payload_length(rcv_data, rcv_data->payload_len);
+        bd_bt_set_crc16(rcv_data, rcv_data->crc16);
+        bd_bt_set_seq_id(rcv_data, rcv_data->seq_id);
+        if (rcv_data->ack_flag)
+        {
+            if (rcv_data->err_flag)
+            {
+                on_ack_response(JNI_TRUE);
+            }
+            else
+            {
+                on_ack_response(JNI_FALSE);
+            }
+            pApp->curr_pos++;
+            logi("ack packet: err flag=%x, curr_len=%d", rcv_data->err_flag, pApp->curr_pos);
+            return JNI_TRUE;
+        }
+        else
+        {
+            memset(pApp, 0, sizeof(app_t));
+            pApp->start = 1;
+            pApp->end = 0;
+            loge("len =0x%04x", rcv_data->payload_len);
+            pApp->payload_len = rcv_data->payload_len;
+            if (rcv_data->payload_len > 0)
+            {
+                size_t len = (size_t) (size - 8);
+                if (len > 0)
+                {
+                    memcpy(pApp->buf, &data[8], len);
+                    pApp->curr_pos += len;
+                }
+            }
+        }
     }
-    rcv_data = (packet_hdr_t *) data;
-    for (int i = 0; i < size; i++) {
-        logi("rcv data i=%d %02x", i, data[i]);
+    else
+    {
+        memcpy(pApp->buf+pApp->curr_pos, data, (size_t) size);
+        pApp->curr_pos += size;
     }
-    bd_bt_set_payload_length(rcv_data, rcv_data->payload_len);
-    bd_bt_set_crc16(rcv_data, rcv_data->crc16);
-    bd_bt_set_seq_id(rcv_data, rcv_data->seq_id);
-    //bd_bt_set_cmdId_version(rcv_data, rcv_data->cmd_id, rcv_data->payload_version);
-    loge("len =0x%04x", rcv_data->payload_len);
 
     //loge("===%02x, %02x, %02x, %02x", rcv_data->reserve, rcv_data->err_flag, rcv_data->ack_flag, rcv_data->version);
-    if (rcv_data->payload_len > 0)
+    if (pApp->payload_len == pApp->curr_pos && pApp->curr_pos > 0)
     {
+        if (!check_crc16(rcv_data, pApp->buf, (uint16_t) pApp->payload_len))
+        {
+            loge("The CRC of data is incorrect...");
+            return JNI_FALSE;
+        }
         logi("cmd id=0x%02x", rcv_data->cmd_id);
         uint8_t *key_value_buf = &data[10];
         parse_key_value(rcv_data->cmd_id, key_value_buf, (uint16_t) (rcv_data->payload_len - 2));
     }
-    else
-    {
-        logw("No payload!");
-    }
+
     return JNI_TRUE;
 }
 static void parse_key_value(uint8_t cmd, uint8_t *buf, uint16_t buf_size)

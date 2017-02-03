@@ -18,6 +18,7 @@ import com.demuxer.BtBandManager;
 import com.inuker.bluetooth.library.connect.listener.BleConnectStatusListener;
 import com.inuker.bluetooth.library.connect.listener.BluetoothStateListener;
 import com.inuker.bluetooth.library.connect.options.BleConnectOptions;
+import com.inuker.bluetooth.library.connect.response.BleAckResponse;
 import com.inuker.bluetooth.library.connect.response.BleConnectResponse;
 import com.inuker.bluetooth.library.connect.response.BleNotifyResponse;
 import com.inuker.bluetooth.library.connect.response.BleReadResponse;
@@ -74,6 +75,7 @@ import static com.inuker.bluetooth.library.Constants.EXTRA_RSSI;
 import static com.inuker.bluetooth.library.Constants.EXTRA_SEARCH_RESULT;
 import static com.inuker.bluetooth.library.Constants.EXTRA_SERVICE_UUID;
 import static com.inuker.bluetooth.library.Constants.EXTRA_TYPE;
+import static com.inuker.bluetooth.library.Constants.REQUEST_FAILED;
 import static com.inuker.bluetooth.library.Constants.REQUEST_SUCCESS;
 import static com.inuker.bluetooth.library.Constants.SEARCH_CANCEL;
 import static com.inuker.bluetooth.library.Constants.SEARCH_START;
@@ -113,9 +115,9 @@ public class BluetoothClientImpl implements IBluetoothClient, ProxyInterceptor, 
 
         mWorkerHandler = new Handler(mWorkerThread.getLooper(), this);
 
-        mNotifyResponses = new HashMap<String, HashMap<String, List<BleNotifyResponse>>>();
-        mConnectStatusListeners = new HashMap<String, List<BleConnectStatusListener>>();
-        mBluetoothStateListener = new LinkedList<BluetoothStateListener>();
+        mNotifyResponses = new HashMap<>();
+        mConnectStatusListeners = new HashMap<>();
+        mBluetoothStateListener = new LinkedList<>();
 
         registerBluetoothReceiver();
 
@@ -199,7 +201,7 @@ public class BluetoothClientImpl implements IBluetoothClient, ProxyInterceptor, 
     public void registerConnectStatusListener(String mac, BleConnectStatusListener listener) {
         List<BleConnectStatusListener> listeners = mConnectStatusListeners.get(mac);
         if (listeners == null) {
-            listeners = new ArrayList<BleConnectStatusListener>();
+            listeners = new ArrayList<>();
             mConnectStatusListeners.put(mac, listeners);
         }
         if (!listeners.contains(listener)) {
@@ -303,14 +305,14 @@ public class BluetoothClientImpl implements IBluetoothClient, ProxyInterceptor, 
     private void saveNotifyListener(String mac, UUID service, UUID character, BleNotifyResponse response) {
         HashMap<String, List<BleNotifyResponse>> listenerMap = mNotifyResponses.get(mac);
         if (listenerMap == null) {
-            listenerMap = new HashMap<String, List<BleNotifyResponse>>();
+            listenerMap = new HashMap<>();
             mNotifyResponses.put(mac, listenerMap);
         }
 
         String key = generateCharacterKey(service, character);
         List<BleNotifyResponse> responses = listenerMap.get(key);
         if (responses == null) {
-            responses = new ArrayList<BleNotifyResponse>();
+            responses = new ArrayList<>();
             listenerMap.put(key, responses);
         }
 
@@ -524,16 +526,26 @@ public class BluetoothClientImpl implements IBluetoothClient, ProxyInterceptor, 
         return true;
     }
 
-    private void dispatchCharacterNotify(String mac, UUID service, UUID character, byte[] value) {
-        Log.w(tag, "dispatchCharacterNotify mac="+mac + ", service="+service +", character="+character);
+    private void dispatchCharacterNotify(String mac, final UUID service, final UUID character, final byte[] value) {
         HashMap<String, List<BleNotifyResponse>> notifyMap = mNotifyResponses.get(mac);
         if (notifyMap != null) {
             String key = generateCharacterKey(service, character);
             List<BleNotifyResponse> responses = notifyMap.get(key);
             if (responses != null) {
+                Log.w(tag, "dispatchCharacterNotify mac="+mac + ", service="+service +", character="+character + ", response size="+responses.size());
                 for (final BleNotifyResponse response : responses) {
-                    response.onNotify(service, character, value);
-                    BtBandManager.getInstance().parseData(value);
+
+                    BtBandManager.getInstance().parseData(value, new BleAckResponse() {
+                        @Override
+                        public void onSuccess() {
+                            response.onNotify(service, character, value);
+                        }
+
+                        @Override
+                        public void onError(String msg) {
+                            response.onResponse(REQUEST_FAILED);
+                        }
+                    });
                 }
             }
         }
