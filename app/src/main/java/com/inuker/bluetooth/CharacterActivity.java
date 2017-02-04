@@ -10,8 +10,6 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 
-import com.bdbt.utils.Commands;
-import com.bdbt.utils.Keys;
 import com.demuxer.BtBandManager;
 import com.demuxer.PayloadInfo;
 import com.inuker.bluetooth.library.connect.listener.BleConnectStatusListener;
@@ -149,22 +147,25 @@ public class CharacterActivity extends Activity implements View.OnClickListener 
                 byte[] data;
                 /*if (isWriteSuccess){
                     PayloadInfo payloadInfo = new PayloadInfo();
-                    payloadInfo.setCommandId(Commands.CMD_BINDING);
+                    payloadInfo.setCommandId(0x06);
                     SparseArray<byte[]> sparseArray = new SparseArray<>();
-                    sparseArray.put(0x06, null);
+                    sparseArray.put(0x03, null);
                     payloadInfo.setValue(sparseArray);
                     data = BtBandManager.getInstance().wrapData(payloadInfo);
 
-                } else */
+                } else*/
                 {
                     PayloadInfo payloadInfo = new PayloadInfo();
-                    payloadInfo.setCommandId(Commands.CMD_BINDING);
+                    payloadInfo.setCommandId(0x06);
                     SparseArray<byte[]> sparseArray = new SparseArray<>();
+                    sparseArray.put(0x03, null);
+                    /*
                     sparseArray.put(Keys.KEY_REQUEST_BINDING_USER, new byte[]{
 //                            0x1,0x2,0x3,0x4,0x5,0x6,0x7,0x8,
 //                            0x1,0x2,0x3,0x4,0x5,0x6,0x7,0x8,
 //                            0x1,0x2,0x3,0x4,0x5,0x6,0x7,0x8,
                             0x1,0x2,0x3,0x4,0x5,0x6,0x7,0x8});
+                    */
                     payloadInfo.setValue(sparseArray);
                     data = BtBandManager.getInstance().wrapData(payloadInfo);
                 }

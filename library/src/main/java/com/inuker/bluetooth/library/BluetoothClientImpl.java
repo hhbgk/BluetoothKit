@@ -13,12 +13,13 @@ import android.os.Looper;
 import android.os.Message;
 import android.os.RemoteException;
 import android.util.Log;
+import android.util.SparseArray;
 
 import com.demuxer.BtBandManager;
+import com.demuxer.PayloadInfo;
 import com.inuker.bluetooth.library.connect.listener.BleConnectStatusListener;
 import com.inuker.bluetooth.library.connect.listener.BluetoothStateListener;
 import com.inuker.bluetooth.library.connect.options.BleConnectOptions;
-import com.inuker.bluetooth.library.connect.response.BleAckResponse;
 import com.inuker.bluetooth.library.connect.response.BleConnectResponse;
 import com.inuker.bluetooth.library.connect.response.BleNotifyResponse;
 import com.inuker.bluetooth.library.connect.response.BleReadResponse;
@@ -49,6 +50,12 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 
+import static com.inuker.bluetooth.library.Constants.BDBT_CRC_ERROR;
+import static com.inuker.bluetooth.library.Constants.BDBT_MAGIC_ERROR;
+import static com.inuker.bluetooth.library.Constants.BDBT_RECV_ERROR;
+import static com.inuker.bluetooth.library.Constants.BDBT_RECV_SUCCESS;
+import static com.inuker.bluetooth.library.Constants.BDBT_SENT_ERROR;
+import static com.inuker.bluetooth.library.Constants.BDBT_SENT_SUCCESS;
 import static com.inuker.bluetooth.library.Constants.CODE_CLEAR_REQUEST;
 import static com.inuker.bluetooth.library.Constants.CODE_CONNECT;
 import static com.inuker.bluetooth.library.Constants.CODE_DISCONNECT;
@@ -534,8 +541,31 @@ public class BluetoothClientImpl implements IBluetoothClient, ProxyInterceptor, 
             if (responses != null) {
                 Log.w(tag, "dispatchCharacterNotify mac="+mac + ", service="+service +", character="+character + ", response size="+responses.size());
                 for (final BleNotifyResponse response : responses) {
+                    int ret = BtBandManager.getInstance().parseData(value);
+                    switch (ret){
+                        case BDBT_SENT_ERROR:
+                            response.onResponse(REQUEST_FAILED);
+                            break;
+                        case BDBT_SENT_SUCCESS:
+                            response.onNotify(service, character, value);
+                            break;
+                        case BDBT_RECV_SUCCESS:
+                            PayloadInfo payloadInfo = new PayloadInfo();
+                            payloadInfo.setCommandId(0x06);
+                            SparseArray<byte[]> sparseArray = new SparseArray<>();
+                            sparseArray.put(0x03, null);
+                            BtBandManager.getInstance().wrapData();
+                            break;
+                        case BDBT_RECV_ERROR:
+                        case BDBT_MAGIC_ERROR:
+                        case BDBT_CRC_ERROR:
 
-                    BtBandManager.getInstance().parseData(value, new BleAckResponse() {
+                            break;
+                        default:
+                            Log.e(tag, "ret error="+ret);
+                            break;
+                    }
+                    /*BtBandManager.getInstance().parseData(value, new BleAckResponse() {
                         @Override
                         public void onSuccess() {
                             response.onNotify(service, character, value);
@@ -546,6 +576,7 @@ public class BluetoothClientImpl implements IBluetoothClient, ProxyInterceptor, 
                             response.onResponse(REQUEST_FAILED);
                         }
                     });
+                    */
                 }
             }
         }

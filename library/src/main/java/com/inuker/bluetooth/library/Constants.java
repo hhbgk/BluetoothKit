@@ -103,4 +103,13 @@ public class Constants {
     public static final int REQUEST_WRITE = 0x2;
     public static final int REQUEST_NOTIFY = 0x4;
     public static final int REQUEST_RSSI = 0x8;
+
+    public static final int BDBT_RECV_SUCCESS = 0;
+    public static final int BDBT_RECV_ERROR = BDBT_RECV_SUCCESS + 1;
+    public static final int BDBT_SENT_SUCCESS = BDBT_RECV_ERROR + 1;
+    public static final int BDBT_SENT_ERROR = BDBT_SENT_SUCCESS + 1;
+    public static final int BDBT_DATA_ILLEGAL = BDBT_SENT_ERROR + 1;
+    public static final int BDBT_MAGIC_ERROR = BDBT_DATA_ILLEGAL + 1;
+    public static final int BDBT_CRC_ERROR = BDBT_MAGIC_ERROR + 1;
+    public static final int BDBT_UNKNOWN_ERROR = BDBT_CRC_ERROR + 1;
 }

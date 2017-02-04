@@ -1,7 +1,5 @@
 package com.inuker.bluetooth.library.utils;
 
-import android.util.Log;
-
 import java.util.Arrays;
 import java.util.Locale;
 
@@ -35,8 +33,8 @@ public class ByteUtils {
         StringBuilder sb = new StringBuilder();
 
         if (!isEmpty(bytes)) {
-            Log.w(tag, "byte size="+bytes.length + ", " + bytes2HexString(bytes));
-            Log.e(tag, "string="+new String(bytes));
+//            Log.w(tag, "byte size="+bytes.length + ", " + bytes2HexString(bytes));
+//            Log.e(tag, "string="+new String(bytes));
             for (int i = 0; i < bytes.length; i++) {
                 sb.append(String.format("%02X ", bytes[i]));
             }

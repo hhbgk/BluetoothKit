@@ -213,7 +213,7 @@ public class BleConnectWorker implements Handler.Callback, IBleConnectWorker, IB
     public void onCharacteristicChanged(BluetoothGattCharacteristic characteristic, byte[] value) {
         checkRuntime();
 
-        BluetoothLog.v(String.format(Locale.US, "onCharacteristicChanged for %s: value = %s, service = 0x%s, character = 0x%s",
+        BluetoothLog.i(String.format(Locale.US, "onCharacteristicChanged for %s: value = %s, service = 0x%s, character = 0x%s",
                 mBluetoothDevice.getAddress(),
                 ByteUtils.byteToString(value),
                 characteristic.getService().getUuid(),

@@ -166,14 +166,3 @@ uint16_t bd_bt_get_seq_id(packet_hdr_t *packetHdr)
 {
     return packetHdr->seq_id;
 }
-
-int check_crc16(packet_hdr_t *packetHdr, uint8_t *data, uint16_t length)
-{
-    int crc;
-    crc = bd_crc16(0, data, length);
-    if(crc != packetHdr->crc16)
-    {
-        return 0;
-    }
-    return 1;
-}

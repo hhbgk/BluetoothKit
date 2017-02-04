@@ -60,6 +60,7 @@ public class DeviceDetailActivity extends Activity {
         mListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                BluetoothLog.i("on item click "+position);
                 if (!mConnected) {
                     return;
                 }

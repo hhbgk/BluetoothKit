@@ -71,11 +71,10 @@ public class BtBandManager {
 
     private BleAckResponse mBleAckResponse;
 
-    public boolean parseData(byte[] receivedData, BleAckResponse bleAckResponse){
+    public int parseData(byte[] receivedData){
         if (receivedData == null){
             throw new NullPointerException("Received data can not be null");
         }
-        mBleAckResponse = bleAckResponse;
         return nativeParseData(receivedData, receivedData.length);
     }
 
@@ -116,5 +115,5 @@ public class BtBandManager {
     private native void nativeInit();
     private native boolean nativeRelease();
     private native byte[] nativeWrapData(PayloadInfo payloadInfo, int version);
-    private native boolean nativeParseData(byte[] receivedData, int size);
+    private native int nativeParseData(byte[] receivedData, int size);
 }

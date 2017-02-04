@@ -28,7 +28,7 @@ typedef struct {
     key_value_t *data;
 }payload_hdr_t;
 
-//L1 packet(8-512)
+//L1 packet(8-512)+L2 header (16 bits)
 typedef struct packet_hdr{
     uint8_t magic;//8 bit
 #if defined (__BIG_ENDIAN_BITFIELD)
@@ -40,14 +40,14 @@ typedef struct packet_hdr{
     uint8_t version:4;
     uint8_t ack_flag:1;
     uint8_t err_flag:1;
-    uint8_t reserve:2;//2 bit
+    uint8_t reserve:2;
 #else
 #error  "Please fix <asm/byteorder.h>"
 #endif
     uint16_t payload_len;
     uint16_t crc16;
     uint16_t seq_id;
-    //data_hdr_t *data_hdr;
+
     uint8_t cmd_id;
 #if defined (__BIG_ENDIAN_BITFIELD)
     uint8_t payload_version:4;
@@ -364,7 +364,6 @@ void bd_bt_set_seq_id(packet_hdr_t *packet, uint16_t);
 void bd_bt_set_cmdId_version(packet_hdr_t *packet, int cmdId, int version);
 void bd_bt_set_payload_length(packet_hdr_t *packet, uint16_t payload_len);
 void bd_bt_set_crc16(packet_hdr_t *packet, uint16_t crc);
-int check_crc16(packet_hdr_t *packetHdr, uint8_t *data, uint16_t length);
 uint16_t bd_bt_get_seq_id(packet_hdr_t *packetHdr);
 void bd_bt_update_seq_id(packet_hdr_t *packetHdr);
 #endif //BLUETOOTHKIT_BT_PACKET_H
