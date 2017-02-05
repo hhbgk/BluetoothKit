@@ -96,6 +96,10 @@ public class BtBandManager {
         return wrapData(payloadInfo, mVersion);
     }
 
+    public byte[] wrapAckPacket(int errFlag, int ackFlag){
+        return nativeWrapAckPacket(errFlag, ackFlag);
+    }
+
     private void setVersion(int version){
         mVersion = version;
     }
@@ -116,4 +120,5 @@ public class BtBandManager {
     private native boolean nativeRelease();
     private native byte[] nativeWrapData(PayloadInfo payloadInfo, int version);
     private native int nativeParseData(byte[] receivedData, int size);
+    private native byte[] nativeWrapAckPacket(int errorFlag, int ackFlag);
 }

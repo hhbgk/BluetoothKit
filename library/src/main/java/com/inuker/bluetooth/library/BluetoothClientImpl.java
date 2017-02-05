@@ -13,10 +13,8 @@ import android.os.Looper;
 import android.os.Message;
 import android.os.RemoteException;
 import android.util.Log;
-import android.util.SparseArray;
 
 import com.demuxer.BtBandManager;
-import com.demuxer.PayloadInfo;
 import com.inuker.bluetooth.library.connect.listener.BleConnectStatusListener;
 import com.inuker.bluetooth.library.connect.listener.BluetoothStateListener;
 import com.inuker.bluetooth.library.connect.options.BleConnectOptions;
@@ -541,6 +539,7 @@ public class BluetoothClientImpl implements IBluetoothClient, ProxyInterceptor, 
             if (responses != null) {
                 Log.w(tag, "dispatchCharacterNotify mac="+mac + ", service="+service +", character="+character + ", response size="+responses.size());
                 for (final BleNotifyResponse response : responses) {
+                    byte[] bytes;
                     int ret = BtBandManager.getInstance().parseData(value);
                     switch (ret){
                         case BDBT_SENT_ERROR:
@@ -550,16 +549,18 @@ public class BluetoothClientImpl implements IBluetoothClient, ProxyInterceptor, 
                             response.onNotify(service, character, value);
                             break;
                         case BDBT_RECV_SUCCESS:
-                            PayloadInfo payloadInfo = new PayloadInfo();
-                            payloadInfo.setCommandId(0x06);
-                            SparseArray<byte[]> sparseArray = new SparseArray<>();
-                            sparseArray.put(0x03, null);
-                            BtBandManager.getInstance().wrapData();
+                            bytes = BtBandManager.getInstance().wrapAckPacket(0, 1);
+                            if (bytes != null) {
+                                write(mac, service, character, bytes, null);
+                            }
                             break;
                         case BDBT_RECV_ERROR:
                         case BDBT_MAGIC_ERROR:
                         case BDBT_CRC_ERROR:
-
+                            bytes = BtBandManager.getInstance().wrapAckPacket(1, 1);
+                            if (bytes != null) {
+                                write(mac, service, character, bytes, null);
+                            }
                             break;
                         default:
                             Log.e(tag, "ret error="+ret);

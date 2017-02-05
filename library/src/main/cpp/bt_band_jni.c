@@ -332,7 +332,7 @@ static jint jni_bt_parse_data(JNIEnv *env, jobject thiz, jbyteArray jbyteArray1,
 
     return BDBT_RECV_SUCCESS;
 }
-static jbyteArray jni_bt_get_ack_packet(JNIEnv *env, jobject thiz, jint errFlag, jint ackFlag)
+static jbyteArray jni_bt_wrap_ack_packet(JNIEnv *env, jobject thiz, jint errFlag, jint ackFlag)
 {
     app_context_t *ctx = &app_ctx;
     jint pack_size = 8;
@@ -457,6 +457,7 @@ static JNINativeMethod g_methods[] =
         {"nativeRelease", "()Z", (void*) jni_bt_release},
         {"nativeWrapData", "(Lcom/demuxer/PayloadInfo;I)[B", (void*) jni_bt_wrap_data},
         {"nativeParseData", "([BI)I", (void *)jni_bt_parse_data},
+        {"nativeWrapAckPacket", "(II)[B", (void*)jni_bt_wrap_ack_packet},
 };
 
 jint JNI_OnLoad(JavaVM *vm, void *reserved)
